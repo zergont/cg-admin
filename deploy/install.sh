@@ -47,6 +47,13 @@ if [[ -d "$APP_DIR/.git" ]]; then
     IS_UPDATE=true
     info "Репозиторий уже существует — режим обновления"
     cd "$APP_DIR"
+
+    CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+    [[ -n "$CURRENT_BRANCH" ]] || CURRENT_BRANCH="main"
+
+    info "Обновляю код из origin/$CURRENT_BRANCH…"
+    git fetch origin "$CURRENT_BRANCH"
+    git reset --hard "origin/$CURRENT_BRANCH"
 else
     info "Клонирую репозиторий…"
     git clone "$REPO_URL" "$APP_DIR"

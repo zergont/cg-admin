@@ -1,5 +1,3 @@
-Here's the improved `README.md` file, incorporating the new content while maintaining the existing structure and information:
-
 # CG Admin Panel
 
 Админ-панель сервера «Честная Генерация» — независимый сервис для мониторинга и управления всей инфраструктурой проекта.
@@ -130,9 +128,8 @@ cat /opt/cg-admin/config.yaml
 ### Обновление
 
 ```bash
-# На сервере: git pull + пересборка
+# На сервере: install.sh сам подтянет текущую ветку и пересоберёт
 cd /opt/cg-admin
-sudo git pull origin main
 sudo bash deploy/install.sh
 ```
 
@@ -179,7 +176,10 @@ Dev-сервер Vite проксирует `/admin/api/*` → `http://127.0.0.1:
 
 ## API (Этап 1)
 
-Все эндпоинты: `/admin/api/*`. Авторизация: `Bearer token` или LAN auto-admin.
+Все эндпоинты: `/admin/api/*`.
+Авторизация:
+- `GET` — `Bearer token` или LAN auto-admin
+- `POST` — только `Bearer token`
 
 | Метод | Эндпоинт                          | Описание                    |
 |-------|------------------------------------|-----------------------------|
