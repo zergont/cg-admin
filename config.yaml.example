@@ -76,8 +76,8 @@ modules:
 
   - name: "Modbus-декодер"
     repo: "https://github.com/zergont/telemetry2"
-    repo_path: "/opt/cg-decoder"
-    service: "cg-decoder"
+    repo_path: "/home/telemetry2"
+    service: "telemetry2"
     branch: "master"
     has_frontend: true
     has_backend: true
