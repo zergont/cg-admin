@@ -1,0 +1,80 @@
+# ============================================================
+# CG Admin Panel — config.yaml
+# Версия конфига: 0.1.0
+# ============================================================
+# Скопируйте в config.yaml и заполните значения.
+# Путь задаётся через переменную CG_ADMIN_CONFIG.
+
+app:
+  name: "CG Admin"
+  version: "0.1.0"
+  debug: false
+
+auth:
+  # Общий Bearer token (тот же что в UI Dashboard config.yaml)
+  token: "CHANGE_ME_same_token_as_dashboard"
+  lan_subnets:
+    - "192.168.0.0/16"
+    - "10.0.0.0/8"
+
+database:
+  # Read-only подключение к PostgreSQL (для метрик, Этап 2)
+  postgres_host: "localhost"
+  postgres_port: 5432
+  postgres_dbname: "cg_telemetry"
+  postgres_user: "cg_ui"
+  postgres_password: "CHANGE_ME"
+
+  # Локальная SQLite для audit/update логов
+  sqlite_path: "/opt/cg-admin/data/admin.db"
+
+services:
+  # Allowlist systemd юнитов — только эти можно рестартить
+  allowed_units:
+    - cg-dashboard
+    - cg-decoder
+    - cg-db-writer
+    - cg-mqtt
+    - nginx
+
+modules:
+  - name: "UI Dashboard"
+    repo: "https://github.com/zergont/UI-telemetry"
+    repo_path: "/opt/cg-dashboard"
+    service: "cg-dashboard"
+    has_frontend: true
+    has_backend: true
+
+  - name: "Modbus-декодер"
+    repo: "https://github.com/zergont/telemetry2"
+    repo_path: "/opt/cg-decoder"
+    service: "cg-decoder"
+    has_frontend: true
+    has_backend: true
+
+  - name: "DB-Writer"
+    repo: "https://github.com/zergont/DB_MQTT"
+    repo_path: "/home/db-writer"
+    service: "cg-db-writer"
+    has_frontend: false
+    has_backend: true
+
+  - name: "MQTT Server"
+    repo: "https://github.com/zergont/MQTT_Server"
+    repo_path: "/opt/cg-mqtt"
+    service: "cg-mqtt"
+    has_frontend: false
+    has_backend: true
+
+  - name: "Admin Panel"
+    repo: "https://github.com/zergont/cg-admin"
+    repo_path: "/opt/cg-admin"
+    service: "cg-admin"
+    has_frontend: true
+    has_backend: true
+    self: true  # Не обновляет себя — обновление через UI-telemetry
+
+external_links:
+  wgdashboard: "https://192.168.0.130:10086"
+  decoder_ui: "http://192.168.0.130:8080"
+  ui_dashboard: "https://192.168.0.130:9443"

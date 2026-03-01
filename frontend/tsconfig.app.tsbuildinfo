@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/layout.tsx","./src/components/logviewer.tsx","./src/components/oshealthbar.tsx","./src/components/servicecard.tsx","./src/lib/api.ts","./src/lib/utils.ts","./src/pages/auditpage.tsx","./src/pages/overviewpage.tsx","./src/pages/servicepage.tsx","./src/pages/updatespage.tsx"],"version":"5.9.3"}

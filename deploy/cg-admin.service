@@ -1,0 +1,17 @@
+[Unit]
+Description=CG Admin Panel
+After=network.target
+
+[Service]
+Type=simple
+User=cg
+Group=cg
+WorkingDirectory=/opt/cg-admin/backend
+Environment=PATH=/opt/cg-admin/backend/.venv/bin:/usr/bin:/bin
+Environment=CG_ADMIN_CONFIG=/opt/cg-admin/config.yaml
+ExecStart=/opt/cg-admin/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 5556 --workers 1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
