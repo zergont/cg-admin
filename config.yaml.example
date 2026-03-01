@@ -30,79 +30,79 @@ database:
   sqlite_path: "/opt/cg-admin/data/admin.db"
 
 services:
-# Allowlist systemd юнитов — только эти можно рестартить через API
-allowed_units:
-  - cg-dashboard
-  - cg-decoder
-  - cg-db-writer
-  - cg-mqtt
-  - nginx
+  # Allowlist systemd юнитов — только эти можно рестартить через API
+  allowed_units:
+    - cg-dashboard
+    - cg-decoder
+    - cg-db-writer
+    - cg-mqtt
+    - nginx
 
-# Список служб для мониторинга на Overview
-# Можно переопределить дефолтный список
-monitored_units:
-  - name: "UI Dashboard"
-    unit: "cg-dashboard"
-    url: "https://192.168.0.130:9443"
-  - name: "Modbus-декодер"
-    unit: "cg-decoder"
-    url: "http://192.168.0.130:8080"
-  - name: "DB-Writer"
-    unit: "cg-db-writer"
-  - name: "MQTT Server"
-    unit: "cg-mqtt"
-  - name: "PostgreSQL"
-    unit: "postgresql"
-  - name: "Wireguard VPN"
-    unit: "wg-quick@wg0"
-  - name: "WGDashboard"
-    unit: "wg-dashboard"
-    url: "https://192.168.0.130:10086"
-  - name: "Nginx"
-    unit: "nginx"
-  - name: "Chrony (NTP)"
-    unit: "chrony"
-  - name: "Admin Panel"
-    unit: "cg-admin"
+  # Список служб для мониторинга на Overview
+  # Можно переопределить дефолтный список
+  monitored_units:
+    - name: "UI Dashboard"
+      unit: "cg-dashboard"
+      url: "https://192.168.0.130:9443"
+    - name: "Modbus-декодер"
+      unit: "cg-decoder"
+      url: "http://192.168.0.130:8080"
+    - name: "DB-Writer"
+      unit: "cg-db-writer"
+    - name: "MQTT Server"
+      unit: "cg-mqtt"
+    - name: "PostgreSQL"
+      unit: "postgresql"
+    - name: "Wireguard VPN"
+      unit: "wg-quick@wg0"
+    - name: "WGDashboard"
+      unit: "wg-dashboard"
+      url: "https://192.168.0.130:10086"
+    - name: "Nginx"
+      unit: "nginx"
+    - name: "Chrony (NTP)"
+      unit: "chrony"
+    - name: "Admin Panel"
+      unit: "cg-admin"
 
 modules:
-- name: "UI Dashboard"
-  repo: "https://github.com/zergont/UI-telemetry"
-  repo_path: "/opt/cg-dashboard"
-  service: "cg-dashboard"
-  branch: "main"
-  has_frontend: true
-  has_backend: true
+  - name: "UI Dashboard"
+    repo: "https://github.com/zergont/UI-telemetry"
+    repo_path: "/opt/cg-dashboard"
+    service: "cg-dashboard"
+    branch: "main"
+    has_frontend: true
+    has_backend: true
 
-- name: "Modbus-декодер"
-  repo: "https://github.com/zergont/telemetry2"
-  repo_path: "/opt/cg-decoder"
-  service: "cg-decoder"
-  branch: "master"
-  has_frontend: true
-  has_backend: true
+  - name: "Modbus-декодер"
+    repo: "https://github.com/zergont/telemetry2"
+    repo_path: "/opt/cg-decoder"
+    service: "cg-decoder"
+    branch: "master"
+    has_frontend: true
+    has_backend: true
 
-- name: "DB-Writer"
-  repo: "https://github.com/zergont/DB_MQTT"
-  repo_path: "/home/db-writer"
-  service: "cg-db-writer"
-  branch: "main"
-  has_frontend: false
-  has_backend: true
+  - name: "DB-Writer"
+    repo: "https://github.com/zergont/DB_MQTT"
+    repo_path: "/home/db-writer"
+    service: "cg-db-writer"
+    branch: "main"
+    has_frontend: false
+    has_backend: true
 
-- name: "MQTT Server"
-  repo: "https://github.com/zergont/MQTT_Server"
-  repo_path: "/opt/cg-mqtt"
-  service: "cg-mqtt"
-  branch: "main"
-  has_frontend: false
-  has_backend: true
+  - name: "MQTT Server"
+    repo: "https://github.com/zergont/MQTT_Server"
+    repo_path: "/opt/cg-mqtt"
+    service: "cg-mqtt"
+    branch: "main"
+    has_frontend: false
+    has_backend: true
 
-- name: "Admin Panel"
-  repo: "https://github.com/zergont/cg-admin"
-  repo_path: "/opt/cg-admin"
-  service: "cg-admin"
-  branch: "main"
-  has_frontend: true
-  has_backend: true
+  - name: "Admin Panel"
+    repo: "https://github.com/zergont/cg-admin"
+    repo_path: "/opt/cg-admin"
+    service: "cg-admin"
+    branch: "main"
+    has_frontend: true
+    has_backend: true
     self: true  # Не обновляет себя — обновление через UI-telemetry
