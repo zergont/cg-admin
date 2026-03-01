@@ -3,6 +3,8 @@ import { apiFetch } from "@/lib/api";
 import { formatUptime, formatBytes } from "@/lib/utils";
 import { OsHealthBar } from "@/components/OsHealthBar";
 import { ServiceCard } from "@/components/ServiceCard";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface OsHealth {
   cpu_percent: number;
@@ -38,13 +40,22 @@ export function OverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground animate-pulse">Загрузка…</div>
+      <div className="space-y-8">
+        <section>
+          <Skeleton className="h-6 w-48 mb-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+        </section>
+      </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="text-[var(--status-crit)]">
+      <div className="text-status-crit">
         Ошибка загрузки: {(error as Error)?.message}
       </div>
     );
@@ -58,29 +69,37 @@ export function OverviewPage() {
       <section>
         <h2 className="text-lg font-semibold mb-4">Состояние сервера</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <OsHealthBar label="CPU" value={os.cpu_percent} />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <OsHealthBar
-              label="RAM"
-              value={os.ram_percent}
-              detail={`${formatBytes(os.ram_used_gb)} / ${formatBytes(os.ram_total_gb)}`}
-            />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4">
-            <OsHealthBar
-              label="Диск"
-              value={os.disk_percent}
-              detail={`${formatBytes(os.disk_used_gb)} / ${formatBytes(os.disk_total_gb)}`}
-            />
-          </div>
-          <div className="rounded-lg border border-border bg-card p-4 flex flex-col justify-center">
-            <span className="text-sm text-muted-foreground">Uptime</span>
-            <span className="text-xl font-semibold">
-              {formatUptime(os.uptime_seconds)}
-            </span>
-          </div>
+          <Card className="py-4">
+            <CardContent>
+              <OsHealthBar label="CPU" value={os.cpu_percent} />
+            </CardContent>
+          </Card>
+          <Card className="py-4">
+            <CardContent>
+              <OsHealthBar
+                label="RAM"
+                value={os.ram_percent}
+                detail={`${formatBytes(os.ram_used_gb)} / ${formatBytes(os.ram_total_gb)}`}
+              />
+            </CardContent>
+          </Card>
+          <Card className="py-4">
+            <CardContent>
+              <OsHealthBar
+                label="Диск"
+                value={os.disk_percent}
+                detail={`${formatBytes(os.disk_used_gb)} / ${formatBytes(os.disk_total_gb)}`}
+              />
+            </CardContent>
+          </Card>
+          <Card className="py-4 flex flex-col justify-center">
+            <CardContent>
+              <span className="text-sm text-muted-foreground">Uptime</span>
+              <span className="block text-xl font-semibold">
+                {formatUptime(os.uptime_seconds)}
+              </span>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

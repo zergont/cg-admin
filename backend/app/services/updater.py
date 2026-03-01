@@ -7,6 +7,9 @@ from app.config import ModuleSettings, get_settings
 from app.database import get_db
 from app.models import ModuleUpdate, UpdateResult, UpdateStatus
 
+# Кэш уже добавленных safe.directory чтобы не дублировать в gitconfig
+_safe_dirs: set[str] = set()
+
 
 async def _run(cmd: list[str], cwd: str | None = None) -> tuple[str, str, int]:
     proc = await asyncio.create_subprocess_exec(
@@ -27,6 +30,7 @@ async def _git_current_commit(repo_path: str) -> str | None:
 
 
 async def _git_current_version(repo_path: str) -> str | None:
+    """Версия из git tag. Если тегов нет — None."""
     stdout, _, code = await _run(
         ["git", "describe", "--tags", "--abbrev=0"], cwd=repo_path,
     )
@@ -34,25 +38,78 @@ async def _git_current_version(repo_path: str) -> str | None:
 
 
 async def _ensure_safe_directory(repo_path: str) -> None:
-    """Mark repo as safe so git doesn't reject it due to ownership mismatch."""
+    """Mark repo as safe (с дедупликацией)."""
+    if repo_path in _safe_dirs:
+        return
+    # Проверяем, уже ли добавлено
+    stdout, _, code = await _run(
+        ["git", "config", "--global", "--get-all", "safe.directory"],
+    )
+    if code == 0 and repo_path in stdout.strip().splitlines():
+        _safe_dirs.add(repo_path)
+        return
     await _run(["git", "config", "--global", "--add", "safe.directory", repo_path])
+    _safe_dirs.add(repo_path)
 
 
 async def _git_fetch(repo_path: str) -> None:
     _, stderr, code = await _run(["git", "fetch", "--all"], cwd=repo_path)
     if code != 0:
-        raise RuntimeError(f"git fetch failed in {repo_path}: {stderr.strip()}")
+        raise RuntimeError(f"git fetch failed: {stderr.strip()}")
 
 
 async def _git_available_commits(repo_path: str, branch: str = "main") -> int:
-    stdout, _, _ = await _run(
+    stdout, _, code = await _run(
         ["git", "rev-list", "--count", f"HEAD..origin/{branch}"],
         cwd=repo_path,
     )
+    if code != 0:
+        return -1  # ошибка, не 0 (чтобы отличить от "актуально")
     try:
         return int(stdout.strip())
     except ValueError:
-        return 0
+        return -1
+
+
+async def _check_single_module(m: ModuleSettings) -> ModuleUpdate:
+    """Проверяет обновления для одного модуля."""
+    if not Path(m.repo_path).exists():
+        return ModuleUpdate(
+            module=m.name,
+            error=f"Репозиторий не найден: {m.repo_path}",
+        )
+
+    await _ensure_safe_directory(m.repo_path)
+
+    fetch_error: str | None = None
+    try:
+        await _git_fetch(m.repo_path)
+    except RuntimeError as e:
+        fetch_error = str(e)
+
+    commit = await _git_current_commit(m.repo_path)
+    version = await _git_current_version(m.repo_path)
+    available = await _git_available_commits(m.repo_path, m.branch)
+
+    # Если available == -1, значит ошибка (fetch не прошёл или ветка не найдена)
+    if available < 0:
+        return ModuleUpdate(
+            module=m.name,
+            current_version=version,
+            current_commit=commit,
+            available_commits=0,
+            up_to_date=True,
+            error=fetch_error or f"Не удалось проверить ветку origin/{m.branch}",
+        )
+
+    return ModuleUpdate(
+        module=m.name,
+        current_version=version,
+        current_commit=commit,
+        available_commits=available,
+        up_to_date=available == 0,
+        error=None,
+    )
 
 
 def _deploy_unit(module: ModuleSettings) -> str:
@@ -60,36 +117,17 @@ def _deploy_unit(module: ModuleSettings) -> str:
 
 
 async def check_updates(modules: list[ModuleSettings]) -> list[ModuleUpdate]:
-    """Проверяет наличие обновлений для всех модулей."""
-    results: list[ModuleUpdate] = []
+    """Проверяет наличие обновлений для всех модулей (параллельно)."""
+    tasks = [_check_single_module(m) for m in modules]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    for m in modules:
-        if not Path(m.repo_path).exists():
-            results.append(ModuleUpdate(module=m.name))
-            continue
-
-        await _ensure_safe_directory(m.repo_path)
-
-        try:
-            await _git_fetch(m.repo_path)
-        except RuntimeError:
-            pass  # fetch failed — compare with whatever origin info we have
-
-        commit = await _git_current_commit(m.repo_path)
-        version = await _git_current_version(m.repo_path)
-        available = await _git_available_commits(m.repo_path, m.branch)
-
-        results.append(
-            ModuleUpdate(
-                module=m.name,
-                current_version=version,
-                current_commit=commit,
-                available_commits=available,
-                up_to_date=available == 0,
-            )
-        )
-
-    return results
+    out: list[ModuleUpdate] = []
+    for m, res in zip(modules, results):
+        if isinstance(res, Exception):
+            out.append(ModuleUpdate(module=m.name, error=str(res)))
+        else:
+            out.append(res)
+    return out
 
 
 async def run_update(module: ModuleSettings, ip: str) -> UpdateResult:
@@ -213,7 +251,7 @@ async def get_update_status(module_name: str) -> UpdateStatus:
 
     logs_out, _, _ = await _run(
         [
-            "journalctl",
+            "sudo", "journalctl",
             "-u",
             unit,
             "-n",

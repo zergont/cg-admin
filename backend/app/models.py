@@ -63,6 +63,7 @@ class ModuleUpdate(BaseModel):
     current_commit: str | None = None
     available_commits: int = 0
     up_to_date: bool = True
+    error: str | None = None
 
 
 class UpdateResult(BaseModel):

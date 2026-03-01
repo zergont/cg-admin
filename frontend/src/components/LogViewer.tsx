@@ -19,6 +19,9 @@ export function LogViewer({ lines, loading }: LogViewerProps) {
           Загрузка логов…
         </div>
       )}
+      {!loading && lines.length === 0 && (
+        <div className="text-muted-foreground">Логи не найдены</div>
+      )}
       {lines.map((line, i) => (
         <div key={i} className="whitespace-pre-wrap break-all">
           {line}

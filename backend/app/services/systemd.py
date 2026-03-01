@@ -102,7 +102,7 @@ async def get_journal_logs(
 ) -> list[str]:
     """Получает логи из journald."""
     cmd = [
-        "journalctl",
+        "sudo", "journalctl",
         "-u", f"{unit}.service",
         "-n", str(lines),
         "--no-pager",

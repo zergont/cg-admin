@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 interface ServiceCardProps {
   name: string;
@@ -13,9 +14,9 @@ interface ServiceCardProps {
 }
 
 const INDICATOR_STYLES = {
-  ok: "bg-[var(--status-ok)]",
-  warn: "bg-[var(--status-warn)]",
-  crit: "bg-[var(--status-crit)]",
+  ok: "bg-status-ok",
+  warn: "bg-status-warn",
+  crit: "bg-status-crit",
 } as const;
 
 export function ServiceCard({
@@ -30,10 +31,10 @@ export function ServiceCard({
   const navigate = useNavigate();
 
   return (
-    <div
+    <Card
       onClick={() => navigate(`/service/${unit}`)}
       className={cn(
-        "flex items-center gap-4 rounded-lg border border-border bg-card p-4",
+        "flex-row items-center gap-4 p-4 py-4",
         "cursor-pointer transition-colors hover:bg-secondary/40",
       )}
     >
@@ -72,6 +73,6 @@ export function ServiceCard({
           <ExternalLink className="h-4 w-4" />
         </a>
       )}
-    </div>
+    </Card>
   );
 }

@@ -9,10 +9,10 @@ interface OsHealthBarProps {
 export function OsHealthBar({ label, value, detail }: OsHealthBarProps) {
   const color =
     value >= 90
-      ? "bg-[var(--status-crit)]"
+      ? "bg-status-crit"
       : value >= 70
-        ? "bg-[var(--status-warn)]"
-        : "bg-[var(--status-ok)]";
+        ? "bg-status-warn"
+        : "bg-status-ok";
 
   return (
     <div className="flex flex-col gap-1.5">

@@ -1,5 +1,6 @@
 """OS health: CPU, RAM, Disk, Uptime (psutil)."""
 
+import asyncio
 import time
 
 import psutil
@@ -7,8 +8,8 @@ import psutil
 from app.models import OsHealth
 
 
-def get_os_health() -> OsHealth:
-    """Собирает текущие метрики ОС."""
+def _collect_os_health() -> OsHealth:
+    """Собирает текущие метрики ОС (блокирующий вызов)."""
     vm = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
     boot = psutil.boot_time()
@@ -23,3 +24,8 @@ def get_os_health() -> OsHealth:
         disk_total_gb=round(disk.total / (1024**3), 1),
         uptime_seconds=int(time.time() - boot),
     )
+
+
+async def get_os_health() -> OsHealth:
+    """Собирает метрики ОС без блокировки event loop."""
+    return await asyncio.to_thread(_collect_os_health)

@@ -12,6 +12,6 @@ router = APIRouter(prefix="/admin/api", tags=["overview"])
 
 @router.get("/overview", response_model=OverviewResponse)
 async def overview(_ip: str = Depends(require_admin)) -> OverviewResponse:
-    os_health = get_os_health()
+    os_health = await get_os_health()
     services = await get_all_services()
     return OverviewResponse(os=os_health, services=services)

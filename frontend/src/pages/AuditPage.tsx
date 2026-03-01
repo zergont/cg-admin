@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AuditEntry {
   id: number;
@@ -27,7 +37,10 @@ export function AuditPage() {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground animate-pulse">Загрузка…</div>
+      <div className="space-y-6">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-48 rounded-xl" />
+      </div>
     );
   }
 
@@ -38,7 +51,7 @@ export function AuditPage() {
         <select
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
-          className="text-xs bg-secondary text-foreground rounded px-2 py-1 border border-border"
+          className="text-xs bg-secondary text-foreground rounded-md px-2 py-1 border border-border"
         >
           <option value="">Все действия</option>
           <option value="restart">restart</option>
@@ -49,49 +62,51 @@ export function AuditPage() {
         </select>
       </div>
 
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-secondary/50">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium">Время</th>
-              <th className="text-left px-4 py-3 font-medium">Действие</th>
-              <th className="text-left px-4 py-3 font-medium">Цель</th>
-              <th className="text-left px-4 py-3 font-medium">Детали</th>
-              <th className="text-left px-4 py-3 font-medium">IP</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="px-4">Время</TableHead>
+              <TableHead className="px-4">Кто</TableHead>
+              <TableHead className="px-4">Действие</TableHead>
+              <TableHead className="px-4">Цель</TableHead>
+              <TableHead className="px-4">Детали</TableHead>
+              <TableHead className="px-4">IP</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {entries?.map((e) => (
-              <tr key={e.id} className="hover:bg-secondary/20">
-                <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+              <TableRow key={e.id}>
+                <TableCell className="px-4 text-xs text-muted-foreground">
                   {new Date(e.timestamp).toLocaleString("ru-RU")}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-block rounded bg-secondary px-2 py-0.5 text-xs font-medium">
-                    {e.action}
-                  </span>
-                </td>
-                <td className="px-4 py-3 font-medium">{e.target}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground max-w-xl whitespace-pre-wrap break-words">
+                </TableCell>
+                <TableCell className="px-4 text-xs text-muted-foreground">
+                  {e.who}
+                </TableCell>
+                <TableCell className="px-4">
+                  <Badge variant="secondary">{e.action}</Badge>
+                </TableCell>
+                <TableCell className="px-4 font-medium">{e.target}</TableCell>
+                <TableCell className="px-4 text-xs text-muted-foreground max-w-xl whitespace-pre-wrap break-words">
                   {e.details ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
+                </TableCell>
+                <TableCell className="px-4 text-xs text-muted-foreground font-mono">
                   {e.ip ?? "—"}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {entries?.length === 0 && (
-              <tr>
-                <td
-                  colSpan={5}
+              <TableRow>
+                <TableCell
+                  colSpan={6}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   Нет записей
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

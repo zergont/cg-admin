@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { LogViewer } from "@/components/LogViewer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ServiceDetail {
   active_state: string;
@@ -31,12 +34,12 @@ export function ServicePage() {
   const [logLines, setLogLines] = useState(100);
   const [logLevel, setLogLevel] = useState<string>("");
 
-  const { data: status, isLoading: statusLoading } = useQuery({
+  const { data: status, isLoading: statusLoading, error: statusError } = useQuery({
     queryKey: ["service-status", unit],
     queryFn: () => apiFetch<ServiceDetail>(`/services/${unit}/status`),
   });
 
-  const { data: logs, isLoading: logsLoading } = useQuery({
+  const { data: logs, isLoading: logsLoading, error: logsError } = useQuery({
     queryKey: ["service-logs", unit, logLines, logLevel],
     queryFn: () => {
       const params = new URLSearchParams({ lines: String(logLines) });
@@ -62,18 +65,27 @@ export function ServicePage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={() => navigate("/")}
-          className="text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
         <h2 className="text-lg font-semibold">{unit}</h2>
       </div>
 
       {/* Status */}
       {statusLoading ? (
-        <div className="text-muted-foreground animate-pulse">Загрузка…</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-16 rounded-xl" />
+          ))}
+        </div>
+      ) : statusError ? (
+        <div className="text-status-crit">
+          Ошибка загрузки статуса: {(statusError as Error).message}
+        </div>
       ) : status ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
@@ -83,46 +95,52 @@ export function ServicePage() {
             { label: "Память", value: status.memory },
             { label: "Uptime", value: status.uptime },
           ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-lg border border-border bg-card p-3"
-            >
-              <div className="text-xs text-muted-foreground">{item.label}</div>
-              <div className="text-sm font-medium mt-1 truncate">
-                {item.value}
-              </div>
-            </div>
+            <Card key={item.label} className="py-3 gap-1">
+              <CardContent className="px-4">
+                <div className="text-xs text-muted-foreground">{item.label}</div>
+                <div className="text-sm font-medium mt-1 truncate">
+                  {item.value}
+                </div>
+              </CardContent>
+            </Card>
           ))}
 
           {/* Restart button */}
-          <div className="rounded-lg border border-border bg-card p-3 flex items-center justify-center">
-            {showConfirm ? (
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-[var(--status-warn)]" />
-                <button
-                  onClick={() => restartMut.mutate()}
-                  disabled={restartMut.isPending}
-                  className="text-sm font-medium text-[var(--status-crit)] hover:underline"
+          <Card className="py-3 flex items-center justify-center">
+            <CardContent className="px-4">
+              {showConfirm ? (
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-status-warn" />
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => restartMut.mutate()}
+                    disabled={restartMut.isPending}
+                    className="text-status-crit"
+                  >
+                    {restartMut.isPending ? "…" : "Да"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setShowConfirm(false)}
+                  >
+                    Отмена
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowConfirm(true)}
+                  className="text-muted-foreground"
                 >
-                  {restartMut.isPending ? "…" : "Да"}
-                </button>
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="text-sm text-muted-foreground hover:underline"
-                >
-                  Отмена
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowConfirm(true)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Restart
-              </button>
-            )}
-          </div>
+                  <RotateCcw className="h-4 w-4" />
+                  Restart
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
       ) : null}
 
@@ -133,7 +151,7 @@ export function ServicePage() {
           <select
             value={logLevel}
             onChange={(e) => setLogLevel(e.target.value)}
-            className="text-xs bg-secondary text-foreground rounded px-2 py-1 border border-border"
+            className="text-xs bg-secondary text-foreground rounded-md px-2 py-1 border border-border"
           >
             <option value="">Все</option>
             <option value="error">error</option>
@@ -143,30 +161,37 @@ export function ServicePage() {
           <select
             value={logLines}
             onChange={(e) => setLogLines(Number(e.target.value))}
-            className="text-xs bg-secondary text-foreground rounded px-2 py-1 border border-border"
+            className="text-xs bg-secondary text-foreground rounded-md px-2 py-1 border border-border"
           >
             <option value={50}>50 строк</option>
             <option value={100}>100 строк</option>
             <option value={500}>500 строк</option>
             <option value={1000}>1000 строк</option>
           </select>
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() =>
               queryClient.invalidateQueries({
                 queryKey: ["service-logs", unit],
               })
             }
-            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <RefreshCw className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
-        <LogViewer lines={logs?.lines ?? []} loading={logsLoading} />
+        {logsError ? (
+          <div className="text-status-crit text-sm">
+            Ошибка загрузки логов: {(logsError as Error).message}
+          </div>
+        ) : (
+          <LogViewer lines={logs?.lines ?? []} loading={logsLoading} />
+        )}
       </section>
 
       {/* Mutation error */}
       {restartMut.error && (
-        <div className="text-sm text-[var(--status-crit)]">
+        <div className="text-sm text-status-crit">
           Ошибка: {(restartMut.error as Error).message}
         </div>
       )}
