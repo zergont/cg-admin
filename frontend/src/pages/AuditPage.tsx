@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 interface AuditEntry {
@@ -43,6 +44,7 @@ export function AuditPage() {
           <option value="">Все действия</option>
           <option value="restart">restart</option>
           <option value="update_start">update_start</option>
+          <option value="update_start_fail">update_start_fail</option>
           <option value="update_done">update_done</option>
           <option value="update_fail">update_fail</option>
         </select>
@@ -71,7 +73,7 @@ export function AuditPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 font-medium">{e.target}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs truncate">
+                <td className="px-4 py-3 text-xs text-muted-foreground max-w-xl whitespace-pre-wrap break-words">
                   {e.details ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-xs text-muted-foreground font-mono">

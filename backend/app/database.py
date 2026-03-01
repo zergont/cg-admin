@@ -28,9 +28,20 @@ CREATE TABLE IF NOT EXISTS update_log (
     started_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     finished_at     TEXT,
     status          TEXT    NOT NULL DEFAULT 'running',
-    log             TEXT
+    log             TEXT,
+    source_ip       TEXT
 );
 """
+
+
+async def _ensure_migrations(db: aiosqlite.Connection) -> None:
+    """Лёгкие миграции для существующих БД без Alembic."""
+    cursor = await db.execute("PRAGMA table_info(update_log)")
+    rows = await cursor.fetchall()
+    columns = {row[1] for row in rows}
+
+    if "source_ip" not in columns:
+        await db.execute("ALTER TABLE update_log ADD COLUMN source_ip TEXT")
 
 
 async def init_db(sqlite_path: str) -> None:
@@ -41,6 +52,7 @@ async def init_db(sqlite_path: str) -> None:
     _db = await aiosqlite.connect(str(path))
     _db.row_factory = aiosqlite.Row
     await _db.executescript(_SCHEMA)
+    await _ensure_migrations(_db)
     await _db.commit()
 
 

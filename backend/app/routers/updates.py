@@ -45,10 +45,16 @@ async def start_update(
     result = await run_update(module, ip)
 
     db = await get_db()
-    await db.execute(
-        "INSERT INTO audit_log (action, target, details, ip) VALUES (?, ?, ?, ?)",
-        ("update_start", module_name, result.job_id, ip),
-    )
+    if result.ok:
+        await db.execute(
+            "INSERT INTO audit_log (action, target, details, ip) VALUES (?, ?, ?, ?)",
+            ("update_start", module_name, result.job_id, ip),
+        )
+    else:
+        await db.execute(
+            "INSERT INTO audit_log (action, target, details, ip) VALUES (?, ?, ?, ?)",
+            ("update_start_fail", module_name, result.message, ip),
+        )
     await db.commit()
 
     return result
@@ -59,4 +65,4 @@ async def update_status(
     module_name: str,
     _ip: str = Depends(require_admin),
 ) -> UpdateStatus:
-    return get_update_status(module_name)
+    return await get_update_status(module_name)

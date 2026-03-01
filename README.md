@@ -8,7 +8,7 @@
 
 - **Overview** — состояние сервера (CPU, RAM, Disk, Uptime) + список всех служб с индикаторами
 - **Service Details** — systemd-статус, journald-логи, restart с подтверждением
-- **Updates** — проверка и установка обновлений модулей (git pull + rebuild + restart)
+- **Updates** — проверка и установка обновлений модулей через `systemd` oneshot (`cg-deploy@`)
 - **Audit Log** — журнал всех административных действий
 
 ## Архитектура
@@ -57,7 +57,7 @@ cg-admin/
 │   │   └── services/
 │   │       ├── systemd.py    # systemctl, journalctl
 │   │       ├── os_health.py  # CPU/RAM/Disk/Uptime (psutil)
-│   │       └── updater.py    # git fetch/pull + build + restart
+│   │       └── updater.py    # запуск/статус systemd oneshot обновлений
 │   └── requirements.txt
 ├── frontend/
 │   ├── package.json          # version: "0.1.0"
@@ -80,6 +80,8 @@ cg-admin/
 ├── deploy/
 │   ├── install.sh            # v0.1.0
 │   ├── cg-admin.service
+│   ├── cg-deploy@.service
+│   ├── cg-module-update.py
 │   └── cg-admin-nginx.conf
 ├── config.yaml.example       # версия конфига: 0.1.0
 ├── .gitignore

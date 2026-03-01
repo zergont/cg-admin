@@ -1,33 +1,13 @@
-"""Обновление модулей: git pull + build + restart."""
+"""Обновление модулей через systemd oneshot unit `cg-deploy@` ."""
+
+"""Обновление модулей через systemd oneshot unit `cg-deploy@`."""
 
 import asyncio
-import uuid
-from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.config import ModuleSettings
+from app.config import ModuleSettings, get_settings
 from app.database import get_db
 from app.models import ModuleUpdate, UpdateResult, UpdateStatus
-from app.services.systemd import restart_unit
-
-
-# ── Состояние обновлений (in-memory) ────────────────────────
-
-
-@dataclass
-class _UpdateJob:
-    job_id: str
-    module: str
-    state: str = "running"  # running, done, error
-    progress: str = ""
-    log: list[str] = field(default_factory=list)
-    error: str | None = None
-
-
-_jobs: dict[str, _UpdateJob] = {}  # module_name → job
-
-
-# ── Helpers ──────────────────────────────────────────────────
 
 
 async def _run(cmd: list[str], cwd: str | None = None) -> tuple[str, str, int]:
@@ -49,7 +29,6 @@ async def _git_current_commit(repo_path: str) -> str | None:
 
 
 async def _git_current_version(repo_path: str) -> str | None:
-    """Пытается получить версию из git describe."""
     stdout, _, code = await _run(
         ["git", "describe", "--tags", "--abbrev=0"], cwd=repo_path,
     )
@@ -61,8 +40,7 @@ async def _git_fetch(repo_path: str) -> None:
 
 
 async def _git_available_commits(repo_path: str, branch: str = "main") -> int:
-    """Количество коммитов, доступных для pull."""
-    stdout, _, code = await _run(
+    stdout, _, _ = await _run(
         ["git", "rev-list", "--count", f"HEAD..origin/{branch}"],
         cwd=repo_path,
     )
@@ -72,7 +50,8 @@ async def _git_available_commits(repo_path: str, branch: str = "main") -> int:
         return 0
 
 
-# ── Публичный API ────────────────────────────────────────────
+def _deploy_unit(module: ModuleSettings) -> str:
+    return f"cg-deploy@{module.service}.service"
 
 
 async def check_updates(modules: list[ModuleSettings]) -> list[ModuleUpdate]:
@@ -103,157 +82,145 @@ async def check_updates(modules: list[ModuleSettings]) -> list[ModuleUpdate]:
 
 
 async def run_update(module: ModuleSettings, ip: str) -> UpdateResult:
-    """Запускает обновление модуля (async background task)."""
-    if module.name in _jobs and _jobs[module.name].state == "running":
+    """Запускает обновление через systemd oneshot unit."""
+    unit = _deploy_unit(module)
+
+    _, _, is_active_code = await _run(["systemctl", "is-active", "--quiet", unit])
+    if is_active_code == 0:
         return UpdateResult(ok=False, message="Update already running")
 
-    job_id = str(uuid.uuid4())[:8]
-    job = _UpdateJob(job_id=job_id, module=module.name)
-    _jobs[module.name] = job
-
-    asyncio.create_task(_do_update(module, job, ip))
-
-    return UpdateResult(ok=True, job_id=job_id, message="Update started")
-
-
-async def _do_update(
-    module: ModuleSettings,
-    job: _UpdateJob,
-    ip: str,
-) -> None:
-    """Процесс обновления в фоне."""
-    db = await get_db()
     version_before = await _git_current_version(module.repo_path)
+    db = await get_db()
+    cursor = await db.execute(
+        "INSERT INTO update_log (module, version_before, status, source_ip) VALUES (?, ?, 'running', ?)",
+        (module.name, version_before, ip),
+    )
+    await db.commit()
+    update_row_id = cursor.lastrowid
 
-    await db.execute(
-        "INSERT INTO update_log (module, version_before, status) "
-        "VALUES (?, ?, 'running')",
-        (module.name, version_before),
+    _, stderr, code = await _run(["sudo", "systemctl", "start", unit])
+    if code != 0:
+        await db.execute(
+            "UPDATE update_log "
+            "SET finished_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), status = 'error', log = ? "
+            "WHERE id = ?",
+            (stderr.strip(), update_row_id),
+        )
+        await db.commit()
+        return UpdateResult(ok=False, message=f"Failed to start update unit: {stderr.strip()}")
+
+    return UpdateResult(ok=True, job_id=module.service, message=f"Update started via {unit}")
+
+
+async def _finalize_update_if_needed(module: ModuleSettings, state: str, logs: list[str], error: str | None) -> None:
+    if state not in {"done", "error"}:
+        return
+
+    db = await get_db()
+    cursor = await db.execute(
+        "SELECT id, version_before, source_ip "
+        "FROM update_log "
+        "WHERE module = ? AND status = 'running' "
+        "ORDER BY id DESC LIMIT 1",
+        (module.name,),
+    )
+    row = await cursor.fetchone()
+    if not row:
+        return
+
+    version_after = await _git_current_version(module.repo_path) if state == "done" else None
+    log_text = "\n".join(logs)
+
+    update_cursor = await db.execute(
+        "UPDATE update_log "
+        "SET finished_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), "
+        "    version_after = ?, status = ?, log = ? "
+        "WHERE id = ?",
+        (version_after, state, log_text, row["id"]),
     )
     await db.commit()
 
-    try:
-        # 1. git pull
-        branch = module.branch
-        job.progress = "git pull"
-        job.log.append(f"$ git pull origin {branch}")
-        stdout, stderr, code = await _run(
-            ["git", "pull", "origin", branch], cwd=module.repo_path,
-        )
-        job.log.append(stdout.strip())
-        if code != 0:
-            raise RuntimeError(f"git pull failed: {stderr.strip()}")
+    if update_cursor.rowcount <= 0:
+        return
 
-        # 2. pip install (если backend)
-        if module.has_backend:
-            req_path = Path(module.repo_path) / "backend" / "requirements.txt"
-            if not req_path.exists():
-                req_path = Path(module.repo_path) / "requirements.txt"
-            if req_path.exists():
-                job.progress = "pip install"
-                job.log.append(f"$ pip install -r {req_path}")
-                venv_pip = Path(module.repo_path) / "backend" / ".venv" / "bin" / "pip"
-                if not venv_pip.exists():
-                    venv_pip = Path(module.repo_path) / ".venv" / "bin" / "pip"
-                pip_cmd = str(venv_pip) if venv_pip.exists() else "pip"
-                stdout, stderr, code = await _run(
-                    [pip_cmd, "install", "-r", str(req_path)],
-                    cwd=module.repo_path,
-                )
-                job.log.append(stdout.strip()[-500:] if stdout else "")
-                if code != 0:
-                    raise RuntimeError(f"pip install failed: {stderr.strip()}")
+    ip = row["source_ip"]
+    if state == "done":
+        version_before = row["version_before"] or "unknown"
+        details = f"{version_before} → {version_after or 'unknown'}"
+        action = "update_done"
+    else:
+        details = error or "update failed"
+        action = "update_fail"
 
-        # 3. npm build (если frontend)
-        if module.has_frontend:
-            frontend_dir = Path(module.repo_path) / "frontend"
-            if not frontend_dir.exists():
-                frontend_dir = Path(module.repo_path)
-            pkg = frontend_dir / "package.json"
-            if pkg.exists():
-                job.progress = "npm install"
-                job.log.append("$ npm install")
-                stdout, stderr, code = await _run(
-                    ["npm", "install"], cwd=str(frontend_dir),
-                )
-                job.log.append(stdout.strip()[-300:] if stdout else "")
-
-                job.progress = "npm run build"
-                job.log.append("$ npm run build")
-                stdout, stderr, code = await _run(
-                    ["npm", "run", "build"], cwd=str(frontend_dir),
-                )
-                job.log.append(stdout.strip()[-500:] if stdout else "")
-                if code != 0:
-                    raise RuntimeError(
-                        f"npm run build failed: {stderr.strip()}"
-                    )
-
-        # 4. restart service
-        job.progress = "restart"
-        job.log.append(f"$ systemctl restart {module.service}")
-        ok, msg = await restart_unit(module.service)
-        job.log.append(msg)
-        if not ok:
-            raise RuntimeError(msg)
-
-        # Done
-        version_after = await _git_current_version(module.repo_path)
-        job.state = "done"
-        job.progress = "complete"
-        job.log.append("✅ Update complete")
-
-        await db.execute(
-            "UPDATE update_log "
-            "SET finished_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), "
-            "    version_after = ?, status = 'done', log = ? "
-            "WHERE module = ? AND status = 'running'",
-            (version_after, "\n".join(job.log), module.name),
-        )
-        await db.commit()
-
-        await db.execute(
-            "INSERT INTO audit_log (action, target, details, ip) "
-            "VALUES (?, ?, ?, ?)",
-            (
-                "update_done",
-                module.name,
-                f"{version_before} → {version_after}",
-                ip,
-            ),
-        )
-        await db.commit()
-
-    except Exception as e:
-        job.state = "error"
-        job.error = str(e)
-        job.log.append(f"❌ Error: {e}")
-
-        await db.execute(
-            "UPDATE update_log "
-            "SET finished_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), "
-            "    status = 'error', log = ? "
-            "WHERE module = ? AND status = 'running'",
-            ("\n".join(job.log), module.name),
-        )
-        await db.commit()
-
-        await db.execute(
-            "INSERT INTO audit_log (action, target, details, ip) "
-            "VALUES (?, ?, ?, ?)",
-            ("update_fail", module.name, str(e), ip),
-        )
-        await db.commit()
+    await db.execute(
+        "INSERT INTO audit_log (action, target, details, ip) VALUES (?, ?, ?, ?)",
+        (action, module.name, details, ip),
+    )
+    await db.commit()
 
 
-def get_update_status(module_name: str) -> UpdateStatus:
-    """Возвращает текущий статус обновления."""
-    job = _jobs.get(module_name)
-    if not job:
-        return UpdateStatus(state="idle")
+async def get_update_status(module_name: str) -> UpdateStatus:
+    """Возвращает статус обновления по systemd unit и journald."""
+    settings = get_settings()
+    module = next((m for m in settings.modules if m.name == module_name), None)
+    if not module:
+        return UpdateStatus(state="idle", error="Module not found")
+
+    unit = _deploy_unit(module)
+    stdout, stderr, code = await _run(
+        [
+            "systemctl",
+            "show",
+            unit,
+            "--property=ActiveState,SubState,Result,ExecMainStatus",
+        ]
+    )
+    if code != 0:
+        return UpdateStatus(state="idle", error=stderr.strip() or "Unit not found")
+
+    props: dict[str, str] = {}
+    for line in stdout.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            props[k] = v
+
+    active = props.get("ActiveState", "unknown")
+    sub = props.get("SubState", "")
+    result = props.get("Result", "")
+    exit_status = props.get("ExecMainStatus", "")
+
+    if active == "active":
+        state = "running"
+    elif result == "success":
+        state = "done"
+    elif result in {"failed", "exit-code", "signal", "timeout"}:
+        state = "error"
+    else:
+        state = "idle"
+
+    logs_out, _, _ = await _run(
+        [
+            "journalctl",
+            "-u",
+            unit,
+            "-n",
+            "100",
+            "--no-pager",
+            "-o",
+            "short-iso",
+        ]
+    )
+    logs = [line for line in logs_out.strip().splitlines() if line.strip()]
+
+    error = None
+    if state == "error":
+        error = f"result={result}, exit_code={exit_status}"
+
+    await _finalize_update_if_needed(module, state, logs, error)
+
     return UpdateStatus(
-        state=job.state,
-        progress=job.progress,
-        log=job.log,
-        error=job.error,
+        state=state,
+        progress=f"{active}/{sub}" if sub else active,
+        log=logs,
+        error=error,
     )

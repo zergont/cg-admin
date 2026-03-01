@@ -1,0 +1,16 @@
+[Unit]
+Description=CG deploy pipeline for %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=CG_ADMIN_CONFIG=/opt/cg-admin/config.yaml
+ExecStart=/usr/bin/python3.12 /opt/cg-admin/deploy/cg-module-update.py %i
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

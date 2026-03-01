@@ -116,6 +116,8 @@ chown "$APP_USER":"$APP_USER" "$APP_DIR/data"
 # ── 8. systemd unit ─────────────────────────────────────────
 info "Устанавливаю systemd unit…"
 cp "$APP_DIR/deploy/cg-admin.service" /etc/systemd/system/
+cp "$APP_DIR/deploy/cg-deploy@.service" /etc/systemd/system/
+chmod 0755 "$APP_DIR/deploy/cg-module-update.py"
 systemctl daemon-reload
 
 # ── 9. sudoers + journal ────────────────────────────────────
@@ -133,6 +135,7 @@ cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-decoder.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-db-writer.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-mqtt.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx.service
+cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl start cg-deploy@*.service
 EOF
 chmod 0440 /etc/sudoers.d/cg-admin
 
