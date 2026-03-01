@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l backend/app/routers/*.py backend/app/services/*.py frontend/src/**/*.tsx)",
+      "Bash(xargs grep -l \"X-Real-IP\\\\|Authorization\")",
+      "Bash(npm install radix-ui tw-animate-css)",
+      "Bash(npm install -D shadcn)",
+      "Bash(npx shadcn@latest add button card badge table scroll-area skeleton separator tooltip dialog -y)",
+      "Bash(npx tsc -b --noEmit)",
+      "Bash(npm run build)",
+      "Bash(git status -u)",
+      "Bash(git add backend/app/models.py backend/app/routers/overview.py backend/app/services/os_health.py backend/app/services/systemd.py backend/app/services/updater.py frontend/package.json frontend/package-lock.json frontend/src/index.css frontend/src/lib/api.ts frontend/src/components/Layout.tsx frontend/src/components/LogViewer.tsx frontend/src/components/OsHealthBar.tsx frontend/src/components/ServiceCard.tsx frontend/src/pages/AuditPage.tsx frontend/src/pages/OverviewPage.tsx frontend/src/pages/ServicePage.tsx frontend/src/pages/UpdatesPage.tsx frontend/src/components/ui/badge.tsx frontend/src/components/ui/button.tsx frontend/src/components/ui/card.tsx frontend/src/components/ui/dialog.tsx frontend/src/components/ui/scroll-area.tsx frontend/src/components/ui/separator.tsx frontend/src/components/ui/skeleton.tsx frontend/src/components/ui/table.tsx frontend/src/components/ui/tooltip.tsx frontend/tsconfig.app.tsbuildinfo)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)",
+      "Bash(git config http.postBuffer 524288000)",
+      "Bash(npm install --package-lock-only)",
+      "Bash(git add backend/app/main.py backend/app/config.py config.yaml.example frontend/package.json frontend/package-lock.json frontend/src/components/Layout.tsx deploy/install.sh README.md)",
+      "Bash(git push origin main v0.2.0)"
+    ]
+  }
+}
