@@ -111,16 +111,21 @@ info "Устанавливаю systemd unit…"
 cp "$APP_DIR/deploy/cg-admin.service" /etc/systemd/system/
 systemctl daemon-reload
 
-# ── 9. sudoers ──────────────────────────────────────────────
+# ── 9. sudoers + journal ────────────────────────────────────
+# Доступ к journald логам через группу (без sudo)
+if ! groups "$APP_USER" 2>/dev/null | grep -q systemd-journal; then
+    info "Добавляю $APP_USER в группу systemd-journal…"
+    usermod -aG systemd-journal "$APP_USER"
+fi
+
+# sudoers — только restart строго по allowlist
 info "Настраиваю sudoers…"
 cat > /etc/sudoers.d/cg-admin << 'EOF'
-cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-dashboard
-cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-decoder
-cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-db-writer
-cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-mqtt
-cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx
-cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl status *
-cg ALL=(ALL) NOPASSWD: /usr/bin/journalctl *
+cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-dashboard.service
+cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-decoder.service
+cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-db-writer.service
+cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-mqtt.service
+cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx.service
 EOF
 chmod 0440 /etc/sudoers.d/cg-admin
 

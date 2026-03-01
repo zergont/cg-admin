@@ -1,27 +1,11 @@
 """Работа с systemd: статус, логи, рестарт."""
 
+"""Работа с systemd: статус, логи, рестарт."""
+
 import asyncio
-import json
-from typing import Any
 
 from app.config import get_settings
 from app.models import ServiceInfo, ServiceDetail
-
-
-# Статическая карта: отображаемое имя → systemd unit
-_SERVICE_MAP: list[dict[str, Any]] = [
-    {"name": "UI Dashboard",    "unit": "cg-dashboard",  "url": None},
-    {"name": "UI Backend",      "unit": "cg-dashboard",  "url": None},
-    {"name": "Modbus-декодер",  "unit": "cg-decoder",    "url": None},
-    {"name": "DB-Writer",       "unit": "cg-db-writer",  "url": None},
-    {"name": "MQTT Server",     "unit": "cg-mqtt",       "url": None},
-    {"name": "PostgreSQL",      "unit": "postgresql",    "url": None},
-    {"name": "Wireguard VPN",   "unit": "wg-quick@wg0",  "url": None},
-    {"name": "WGDashboard",     "unit": "wg-dashboard",  "url": None},
-    {"name": "Nginx",           "unit": "nginx",         "url": None},
-    {"name": "Chrony (NTP)",    "unit": "chrony",        "url": None},
-    {"name": "Admin Service",   "unit": "cg-admin",      "url": None},
-]
 
 
 async def _run(cmd: list[str]) -> tuple[str, str, int]:
@@ -60,23 +44,15 @@ def _indicator(active: str) -> str:
 
 
 async def get_all_services() -> list[ServiceInfo]:
-    """Возвращает краткий статус всех служб."""
+    """Возвращает краткий статус всех служб (список из config)."""
     settings = get_settings()
-    external = settings.external_links
+    monitored = settings.services.monitored_units
 
-    url_overrides: dict[str, str] = {}
-    if external.ui_dashboard:
-        url_overrides["UI Dashboard"] = external.ui_dashboard
-    if external.decoder_ui:
-        url_overrides["Modbus-декодер"] = external.decoder_ui
-    if external.wgdashboard:
-        url_overrides["WGDashboard"] = external.wgdashboard
-
-    tasks = [_systemctl_show(s["unit"]) for s in _SERVICE_MAP]
+    tasks = [_systemctl_show(m.unit) for m in monitored]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     services: list[ServiceInfo] = []
-    for svc, res in zip(_SERVICE_MAP, results):
+    for svc, res in zip(monitored, results):
         if isinstance(res, Exception):
             active_state = "unknown"
             sub_state = "error"
@@ -84,16 +60,14 @@ async def get_all_services() -> list[ServiceInfo]:
             active_state = res.get("ActiveState", "unknown")
             sub_state = res.get("SubState", "unknown")
 
-        url = url_overrides.get(svc["name"], svc.get("url"))
-
         services.append(
             ServiceInfo(
-                name=svc["name"],
-                unit=svc["unit"],
+                name=svc.name,
+                unit=svc.unit,
                 status=active_state,
                 sub_state=sub_state,
                 version=None,
-                url=url,
+                url=svc.url,
                 indicator=_indicator(active_state),
             )
         )
@@ -130,7 +104,7 @@ async def get_journal_logs(
 ) -> list[str]:
     """Получает логи из journald."""
     cmd = [
-        "sudo", "journalctl",
+        "journalctl",
         "-u", f"{unit}.service",
         "-n", str(lines),
         "--no-pager",

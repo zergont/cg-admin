@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.auth import require_admin
+from app.auth import require_admin, require_admin_write
 from app.config import get_settings
 from app.database import get_db
 from app.models import ModuleUpdate, UpdateResult, UpdateStatus
@@ -27,7 +27,7 @@ async def list_updates(
 @router.post("/{module_name}", response_model=UpdateResult)
 async def start_update(
     module_name: str,
-    ip: str = Depends(require_admin),
+    ip: str = Depends(require_admin_write),
 ) -> UpdateResult:
     settings = get_settings()
     module = next((m for m in settings.modules if m.name == module_name), None)

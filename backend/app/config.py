@@ -21,7 +21,7 @@ class AppSettings(BaseModel):
 
 class AuthSettings(BaseModel):
     token: str
-    lan_subnets: list[str] = ["192.168.0.0/16", "10.0.0.0/8"]
+    lan_subnets: list[str] = ["192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12"]
 
 
 class DatabaseSettings(BaseModel):
@@ -38,6 +38,7 @@ class ModuleSettings(BaseModel):
     repo: str
     repo_path: str
     service: str
+    branch: str = "main"
     has_frontend: bool = False
     has_backend: bool = True
     self_: bool = False
@@ -50,14 +51,26 @@ class ModuleSettings(BaseModel):
         return data
 
 
+class MonitoredUnit(BaseModel):
+    name: str
+    unit: str
+    url: str | None = None
+
+
 class ServicesSettings(BaseModel):
     allowed_units: list[str] = []
-
-
-class ExternalLinks(BaseModel):
-    wgdashboard: str = ""
-    decoder_ui: str = ""
-    ui_dashboard: str = ""
+    monitored_units: list[MonitoredUnit] = [
+        MonitoredUnit(name="UI Dashboard",   unit="cg-dashboard"),
+        MonitoredUnit(name="Modbus-декодер", unit="cg-decoder"),
+        MonitoredUnit(name="DB-Writer",      unit="cg-db-writer"),
+        MonitoredUnit(name="MQTT Server",    unit="cg-mqtt"),
+        MonitoredUnit(name="PostgreSQL",     unit="postgresql"),
+        MonitoredUnit(name="Wireguard VPN",  unit="wg-quick@wg0"),
+        MonitoredUnit(name="WGDashboard",    unit="wg-dashboard"),
+        MonitoredUnit(name="Nginx",          unit="nginx"),
+        MonitoredUnit(name="Chrony (NTP)",   unit="chrony"),
+        MonitoredUnit(name="Admin Panel",    unit="cg-admin"),
+    ]
 
 
 class Settings(BaseModel):
@@ -66,7 +79,6 @@ class Settings(BaseModel):
     database: DatabaseSettings = DatabaseSettings()
     services: ServicesSettings = ServicesSettings()
     modules: list[ModuleSettings] = []
-    external_links: ExternalLinks = ExternalLinks()
 
 
 # ── Загрузка ─────────────────────────────────────────────────

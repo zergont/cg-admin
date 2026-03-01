@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.auth import require_admin
+from app.auth import require_admin, require_admin_write
 from app.config import get_settings
 from app.database import get_db
 from app.models import ServiceDetail, LogsResponse
@@ -34,7 +34,7 @@ async def service_logs(
 @router.post("/{unit}/restart")
 async def service_restart(
     unit: str,
-    ip: str = Depends(require_admin),
+    ip: str = Depends(require_admin_write),
 ) -> dict[str, object]:
     settings = get_settings()
     if unit not in settings.services.allowed_units:

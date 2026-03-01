@@ -60,17 +60,12 @@ async def _git_fetch(repo_path: str) -> None:
     await _run(["git", "fetch", "--all"], cwd=repo_path)
 
 
-async def _git_available_commits(repo_path: str) -> int:
+async def _git_available_commits(repo_path: str, branch: str = "main") -> int:
     """Количество коммитов, доступных для pull."""
     stdout, _, code = await _run(
-        ["git", "rev-list", "--count", "HEAD..origin/master"],
+        ["git", "rev-list", "--count", f"HEAD..origin/{branch}"],
         cwd=repo_path,
     )
-    if code != 0:
-        stdout, _, code = await _run(
-            ["git", "rev-list", "--count", "HEAD..origin/main"],
-            cwd=repo_path,
-        )
     try:
         return int(stdout.strip())
     except ValueError:
@@ -92,7 +87,7 @@ async def check_updates(modules: list[ModuleSettings]) -> list[ModuleUpdate]:
         await _git_fetch(m.repo_path)
         commit = await _git_current_commit(m.repo_path)
         version = await _git_current_version(m.repo_path)
-        available = await _git_available_commits(m.repo_path)
+        available = await _git_available_commits(m.repo_path, m.branch)
 
         results.append(
             ModuleUpdate(
@@ -139,15 +134,12 @@ async def _do_update(
 
     try:
         # 1. git pull
+        branch = module.branch
         job.progress = "git pull"
-        job.log.append("$ git pull origin master")
+        job.log.append(f"$ git pull origin {branch}")
         stdout, stderr, code = await _run(
-            ["git", "pull", "origin", "master"], cwd=module.repo_path,
+            ["git", "pull", "origin", branch], cwd=module.repo_path,
         )
-        if code != 0:
-            stdout, stderr, code = await _run(
-                ["git", "pull", "origin", "main"], cwd=module.repo_path,
-            )
         job.log.append(stdout.strip())
         if code != 0:
             raise RuntimeError(f"git pull failed: {stderr.strip()}")
