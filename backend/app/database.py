@@ -1,7 +1,5 @@
 """SQLite: audit_log + update_log (aiosqlite)."""
 
-"""SQLite: audit_log + update_log (aiosqlite)."""
-
 from pathlib import Path
 from typing import Optional
 

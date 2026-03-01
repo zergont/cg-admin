@@ -1,5 +1,3 @@
-"""Обновление модулей через systemd oneshot unit `cg-deploy@` ."""
-
 """Обновление модулей через systemd oneshot unit `cg-deploy@`."""
 
 import asyncio
@@ -35,8 +33,15 @@ async def _git_current_version(repo_path: str) -> str | None:
     return stdout.strip() if code == 0 else None
 
 
+async def _ensure_safe_directory(repo_path: str) -> None:
+    """Mark repo as safe so git doesn't reject it due to ownership mismatch."""
+    await _run(["git", "config", "--global", "--add", "safe.directory", repo_path])
+
+
 async def _git_fetch(repo_path: str) -> None:
-    await _run(["git", "fetch", "--all"], cwd=repo_path)
+    _, stderr, code = await _run(["git", "fetch", "--all"], cwd=repo_path)
+    if code != 0:
+        raise RuntimeError(f"git fetch failed in {repo_path}: {stderr.strip()}")
 
 
 async def _git_available_commits(repo_path: str, branch: str = "main") -> int:
@@ -63,7 +68,13 @@ async def check_updates(modules: list[ModuleSettings]) -> list[ModuleUpdate]:
             results.append(ModuleUpdate(module=m.name))
             continue
 
-        await _git_fetch(m.repo_path)
+        await _ensure_safe_directory(m.repo_path)
+
+        try:
+            await _git_fetch(m.repo_path)
+        except RuntimeError:
+            pass  # fetch failed — compare with whatever origin info we have
+
         commit = await _git_current_commit(m.repo_path)
         version = await _git_current_version(m.repo_path)
         available = await _git_available_commits(m.repo_path, m.branch)
@@ -89,6 +100,7 @@ async def run_update(module: ModuleSettings, ip: str) -> UpdateResult:
     if is_active_code == 0:
         return UpdateResult(ok=False, message="Update already running")
 
+    await _ensure_safe_directory(module.repo_path)
     version_before = await _git_current_version(module.repo_path)
     db = await get_db()
     cursor = await db.execute(
@@ -128,6 +140,7 @@ async def _finalize_update_if_needed(module: ModuleSettings, state: str, logs: l
     if not row:
         return
 
+    await _ensure_safe_directory(module.repo_path)
     version_after = await _git_current_version(module.repo_path) if state == "done" else None
     log_text = "\n".join(logs)
 

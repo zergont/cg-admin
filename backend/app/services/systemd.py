@@ -1,7 +1,5 @@
 """Работа с systemd: статус, логи, рестарт."""
 
-"""Работа с systemd: статус, логи, рестарт."""
-
 import asyncio
 
 from app.config import get_settings

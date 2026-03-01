@@ -1,7 +1,5 @@
 """Единый конфиг из config.yaml (Pydantic-модели)."""
 
-"""Единый конфиг из config.yaml (Pydantic-модели)."""
-
 import os
 from functools import lru_cache
 from pathlib import Path
