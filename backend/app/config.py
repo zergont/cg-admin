@@ -1,11 +1,13 @@
 """Единый конфиг из config.yaml (Pydantic-модели)."""
 
+"""Единый конфиг из config.yaml (Pydantic-модели)."""
+
 import os
 from functools import lru_cache
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 # ── Pydantic-модели ──────────────────────────────────────────
@@ -40,12 +42,12 @@ class ModuleSettings(BaseModel):
     has_backend: bool = True
     self_: bool = False
 
-    model_config = {"populate_by_name": True}
-
-    def __init__(self, **data: object) -> None:
-        if "self" in data:
-            data["self_"] = data.pop("self")  # type: ignore[arg-type]
-        super().__init__(**data)
+    @model_validator(mode="before")
+    @classmethod
+    def rename_self_key(cls, data: dict) -> dict:
+        if isinstance(data, dict) and "self" in data:
+            data["self_"] = data.pop("self")
+        return data
 
 
 class ServicesSettings(BaseModel):
