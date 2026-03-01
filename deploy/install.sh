@@ -39,13 +39,14 @@ if ! id "$APP_USER" &>/dev/null; then
 fi
 
 # ── 3. Клонирование / обновление ────────────────────────────
+# Решаем проблему "dubious ownership" при sudo git pull
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+
 IS_UPDATE=false
 if [[ -d "$APP_DIR/.git" ]]; then
     IS_UPDATE=true
     info "Репозиторий уже существует — режим обновления"
     cd "$APP_DIR"
-    # git pull не делаем — предполагается что уже выполнен вручную
-    # (или этот скрипт запущен после git pull)
 else
     info "Клонирую репозиторий…"
     git clone "$REPO_URL" "$APP_DIR"
