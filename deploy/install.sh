@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# CG Admin Panel — install.sh v0.1.0
+# CG Admin Panel — install.sh v0.2.0
 # ============================================================
 set -euo pipefail
 
@@ -136,6 +136,7 @@ cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-db-writer.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-mqtt.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl start cg-deploy@*.service
+cg ALL=(ALL) NOPASSWD: /usr/bin/journalctl *
 EOF
 chmod 0440 /etc/sudoers.d/cg-admin
 
@@ -171,9 +172,9 @@ systemctl status "$SERVICE_NAME" --no-pager
 echo ""
 info "============================================================"
 if [[ "$IS_UPDATE" == true ]]; then
-    info "  CG Admin Panel v0.1.0 обновлена!"
+    info "  CG Admin Panel v0.2.0 обновлена!"
 else
-    info "  CG Admin Panel v0.1.0 установлена!"
+    info "  CG Admin Panel v0.2.0 установлена!"
 fi
 info "  URL:    https://192.168.0.130:9443/admin/"
 info "  Config: $APP_DIR/config.yaml"
