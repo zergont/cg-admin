@@ -89,20 +89,73 @@ cg-admin/
 └── README.md
 ```
 
-## Быстрый старт
+## Доступ к панели
+
+| Метод | URL |
+|-------|-----|
+| Через браузер (LAN/VPN) | **https://192.168.0.130:9443/admin/** |
+| Из UI Dashboard | Шестерёнка ⚙️ в шапке (только для admin) |
+| API docs (Swagger) | https://192.168.0.130:9443/admin/api/docs |
+
+> Панель доступна **только из LAN** (192.168.0.0/16) и **Wireguard VPN** (10.0.0.0/8).  
+> Nginx ограничивает доступ по IP — извне не откроется.
+
+## Установка на сервер
 
 ### Требования
 - Ubuntu 24.04 LTS
 - Python 3.12+, Node.js 20+, git
-- Пользователь `cg` с sudo-правами для systemctl
+- Пользователь `cg` (будет создан автоматически)
 
-### Установка (Ubuntu 24.04)
+### Первая установка
 
 ```bash
+# 1. Клонируем репозиторий
+sudo git clone https://github.com/zergont/cg-admin.git /opt/cg-admin
+
+# 2. Запускаем установщик
+sudo bash /opt/cg-admin/deploy/install.sh
+
+# 3. Редактируем конфиг (указать токен из UI Dashboard)
+sudo nano /opt/cg-admin/config.yaml
+
+# 4. Перезапускаем с правильным конфигом
+sudo systemctl restart cg-admin
+```
+
+После установки сервис **автоматически запускается при загрузке сервера** (`systemctl enable`).
+
+### Обновление
+
+```bash
+# На сервере: git pull + пересборка
+cd /opt/cg-admin
+sudo git pull origin main
 sudo bash deploy/install.sh
 ```
 
-### Ручной запуск (разработка)
+Скрипт `install.sh` идемпотентен — определяет, что репо уже есть, и выполняет обновление:
+- `pip install -r requirements.txt` (если зависимости изменились)
+- `npm run build` (пересборка фронта)
+- `systemctl restart cg-admin`
+
+### Управление сервисом
+
+```bash
+# Статус
+sudo systemctl status cg-admin
+
+# Логи (live)
+journalctl -u cg-admin -f
+
+# Перезапуск
+sudo systemctl restart cg-admin
+
+# Остановка
+sudo systemctl stop cg-admin
+```
+
+### Разработка (локально)
 
 ```bash
 # Backend
@@ -119,6 +172,8 @@ cd frontend
 npm install
 npm run dev
 ```
+
+Dev-сервер Vite проксирует `/admin/api/*` → `http://127.0.0.1:5556`.
 
 ## API (Этап 1)
 

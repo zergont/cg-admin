@@ -39,9 +39,13 @@ if ! id "$APP_USER" &>/dev/null; then
 fi
 
 # ── 3. Клонирование / обновление ────────────────────────────
+IS_UPDATE=false
 if [[ -d "$APP_DIR/.git" ]]; then
-    info "Репозиторий уже существует, обновляю…"
-    cd "$APP_DIR" && git pull origin main
+    IS_UPDATE=true
+    info "Репозиторий уже существует — режим обновления"
+    cd "$APP_DIR"
+    # git pull не делаем — предполагается что уже выполнен вручную
+    # (или этот скрипт запущен после git pull)
 else
     info "Клонирую репозиторий…"
     git clone "$REPO_URL" "$APP_DIR"
@@ -106,15 +110,31 @@ else
 fi
 
 # ── 11. Запуск ──────────────────────────────────────────────
-info "Запускаю сервис…"
+info "Включаю автозапуск при загрузке сервера…"
 systemctl enable "$SERVICE_NAME"
-systemctl start "$SERVICE_NAME"
+
+if [[ "$IS_UPDATE" == true ]]; then
+    info "Перезапускаю сервис (обновление)…"
+    systemctl restart "$SERVICE_NAME"
+else
+    info "Запускаю сервис (первая установка)…"
+    systemctl start "$SERVICE_NAME"
+fi
+
+sleep 2
 systemctl status "$SERVICE_NAME" --no-pager
 
 echo ""
 info "============================================================"
-info "  CG Admin Panel v0.1.0 установлена!"
+if [[ "$IS_UPDATE" == true ]]; then
+    info "  CG Admin Panel v0.1.0 обновлена!"
+else
+    info "  CG Admin Panel v0.1.0 установлена!"
+fi
 info "  URL:    https://192.168.0.130:9443/admin/"
 info "  Config: $APP_DIR/config.yaml"
 info "  Logs:   journalctl -u $SERVICE_NAME -f"
+info ""
+info "  Автозапуск: включён (systemctl enable)"
+info "  Сервис автоматически поднимется после перезагрузки."
 info "============================================================"
