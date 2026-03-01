@@ -67,10 +67,38 @@ npm install
 npm run build
 
 # ── 6. config.yaml ──────────────────────────────────────────
+DASHBOARD_CONFIG="/opt/cg-dashboard/config.yaml"
 if [[ ! -f "$APP_DIR/config.yaml" ]]; then
-    warn "config.yaml не найден, копирую example…"
+    info "config.yaml не найден, создаю из example…"
     cp "$APP_DIR/config.yaml.example" "$APP_DIR/config.yaml"
-    warn "ВАЖНО: отредактируйте $APP_DIR/config.yaml!"
+
+    # Автоподтягивание токена из UI Dashboard
+    if [[ -f "$DASHBOARD_CONFIG" ]]; then
+        DASH_TOKEN=$(grep -oP '(?<=token:\s")[^"]+' "$DASHBOARD_CONFIG" 2>/dev/null \
+                  || grep -oP "(?<=token:\s')[^']+" "$DASHBOARD_CONFIG" 2>/dev/null \
+                  || grep -oP '(?<=token:\s)\S+' "$DASHBOARD_CONFIG" 2>/dev/null \
+                  || echo "")
+        if [[ -n "$DASH_TOKEN" && "$DASH_TOKEN" != "CHANGE_ME"* ]]; then
+            info "Токен найден в $DASHBOARD_CONFIG — подставляю"
+            sed -i "s|token: \"CHANGE_ME_same_token_as_dashboard\"|token: \"$DASH_TOKEN\"|" "$APP_DIR/config.yaml"
+        else
+            warn "Токен в Dashboard не найден — укажите вручную в $APP_DIR/config.yaml"
+        fi
+
+        # Автоподтягивание пароля PostgreSQL
+        PG_PASS=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$DASHBOARD_CONFIG" 2>/dev/null \
+               || grep -oP '(?<=postgres_password:\s)\S+' "$DASHBOARD_CONFIG" 2>/dev/null \
+               || echo "")
+        if [[ -n "$PG_PASS" && "$PG_PASS" != "CHANGE_ME"* ]]; then
+            info "PostgreSQL пароль найден — подставляю"
+            sed -i "s|postgres_password: \"CHANGE_ME\"|postgres_password: \"$PG_PASS\"|" "$APP_DIR/config.yaml"
+        fi
+    else
+        warn "UI Dashboard конфиг не найден ($DASHBOARD_CONFIG)"
+        warn "Укажите token и postgres_password вручную в $APP_DIR/config.yaml"
+    fi
+else
+    info "config.yaml уже существует — пропускаю"
 fi
 
 # ── 7. SQLite директория ────────────────────────────────────

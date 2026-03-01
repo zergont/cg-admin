@@ -116,12 +116,14 @@ sudo git clone https://github.com/zergont/cg-admin.git /opt/cg-admin
 # 2. Запускаем установщик
 sudo bash /opt/cg-admin/deploy/install.sh
 
-# 3. Редактируем конфиг (указать токен из UI Dashboard)
-sudo nano /opt/cg-admin/config.yaml
-
-# 4. Перезапускаем с правильным конфигом
-sudo systemctl restart cg-admin
+# 3. Проверяем конфиг (токен подтянется автоматически из UI Dashboard)
+cat /opt/cg-admin/config.yaml
 ```
+
+> `install.sh` автоматически находит `token` и `postgres_password`  
+> из `/opt/cg-dashboard/config.yaml` и подставляет в конфиг админки.  
+> Если Dashboard не установлен — укажите значения вручную:  
+> `sudo nano /opt/cg-admin/config.yaml`
 
 После установки сервис **автоматически запускается при загрузке сервера** (`systemctl enable`).
 
@@ -205,3 +207,9 @@ Dev-сервер Vite проксирует `/admin/api/*` → `http://127.0.0.1:
 ## Лицензия
 
 Внутренний проект. Все права защищены.
+
+## Тегирование релиза
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
