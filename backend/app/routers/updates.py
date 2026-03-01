@@ -1,7 +1,5 @@
 """Роутер обновлений модулей."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth import require_admin

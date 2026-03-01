@@ -1,12 +1,13 @@
 """SQLite: audit_log + update_log (aiosqlite)."""
 
-from __future__ import annotations
+"""SQLite: audit_log + update_log (aiosqlite)."""
 
 from pathlib import Path
+from typing import Optional
 
 import aiosqlite
 
-_db: aiosqlite.Connection | None = None
+_db: Optional[aiosqlite.Connection] = None
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS audit_log (

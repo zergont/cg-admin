@@ -1,7 +1,5 @@
 """Авторизация: Bearer token + LAN auto-admin."""
 
-from __future__ import annotations
-
 import ipaddress
 from typing import Annotated
 

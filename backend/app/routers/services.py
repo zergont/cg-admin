@@ -1,7 +1,5 @@
 """Роутер для управления systemd-сервисами."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.auth import require_admin

@@ -1,7 +1,5 @@
 """GET /admin/api/audit — журнал аудита."""
 
-from __future__ import annotations
-
 from fastapi import APIRouter, Depends, Query
 
 from app.auth import require_admin

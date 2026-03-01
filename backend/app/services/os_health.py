@@ -1,7 +1,5 @@
 """OS health: CPU, RAM, Disk, Uptime (psutil)."""
 
-from __future__ import annotations
-
 import time
 
 import psutil
