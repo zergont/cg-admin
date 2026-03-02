@@ -1,18 +1,18 @@
 # ============================================================
 # CG Admin Panel — config.yaml
-# Версия конфига: 0.2.0
+# Версия конфига: 0.2.1
 # ============================================================
 # Скопируйте в config.yaml и заполните значения.
 # Путь задаётся через переменную CG_ADMIN_CONFIG.
 
 app:
   name: "CG Admin"
-  version: "0.2.0"
+  version: "0.2.1"
   debug: false
 
 auth:
   # Общий Bearer token (тот же что в UI Dashboard config.yaml)
-  token: "CHANGE_ME_same_token_as_dashboard"
+  token: "4879d3f5f6a03baf3fd3794c32ee3f5ca6fc6b3542f737e9"
   lan_subnets:
     - "192.168.0.0/16"
     - "10.0.0.0/8"
@@ -24,7 +24,7 @@ database:
   postgres_port: 5432
   postgres_dbname: "cg_telemetry"
   postgres_user: "cg_ui"
-  postgres_password: "CHANGE_ME"
+  postgres_password: "cg_ui"
 
   # Локальная SQLite для audit/update логов
   sqlite_path: "/opt/cg-admin/data/admin.db"
@@ -33,10 +33,11 @@ services:
   # Allowlist systemd юнитов — только эти можно рестартить через API
   allowed_units:
     - cg-dashboard
-    - cg-decoder
+    - telemetry2
     - cg-db-writer
-    - cg-mqtt
+    - mosquitto
     - nginx
+    - chrony
 
   # Список служб для мониторинга на Overview
   # Можно переопределить дефолтный список
@@ -45,16 +46,16 @@ services:
       unit: "cg-dashboard"
       url: "https://192.168.0.130:9443"
     - name: "Modbus-декодер"
-      unit: "cg-decoder"
+      unit: "telemetry2"
       url: "http://192.168.0.130:8080"
     - name: "DB-Writer"
       unit: "cg-db-writer"
     - name: "MQTT Server"
-      unit: "cg-mqtt"
+      unit: "mosquitto"
     - name: "PostgreSQL"
       unit: "postgresql"
     - name: "Wireguard VPN"
-      unit: "wg-quick@wg0"
+      unit: "wg-quick@MQTT"
     - name: "WGDashboard"
       unit: "wg-dashboard"
       url: "https://192.168.0.130:10086"
@@ -64,13 +65,14 @@ services:
       unit: "chrony"
     - name: "Admin Panel"
       unit: "cg-admin"
+      url: "https://192.168.0.130:9443/admin/"
 
 modules:
   - name: "UI Dashboard"
     repo: "https://github.com/zergont/UI-telemetry"
     repo_path: "/opt/cg-dashboard"
     service: "cg-dashboard"
-    branch: "main"
+    branch: "master"
     has_frontend: true
     has_backend: true
 
@@ -86,15 +88,15 @@ modules:
     repo: "https://github.com/zergont/DB_MQTT"
     repo_path: "/home/db-writer"
     service: "cg-db-writer"
-    branch: "main"
+    branch: "master"
     has_frontend: false
     has_backend: true
 
   - name: "MQTT Server"
     repo: "https://github.com/zergont/MQTT_Server"
     repo_path: "/opt/cg-mqtt"
-    service: "cg-mqtt"
-    branch: "main"
+    service: ""mosquitto"
+    branch: "master"
     has_frontend: false
     has_backend: true
 
