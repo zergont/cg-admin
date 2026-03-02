@@ -58,7 +58,7 @@ services:
       unit: "wg-quick@MQTT"
     - name: "WGDashboard"
       unit: "wg-dashboard"
-      url: "https://192.168.0.130:10086"
+      url: "http://192.168.0.130:10086"
     - name: "Nginx"
       unit: "nginx"
     - name: "Chrony (NTP)"
