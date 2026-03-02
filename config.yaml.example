@@ -95,7 +95,7 @@ modules:
   - name: "MQTT Server"
     repo: "https://github.com/zergont/MQTT_Server"
     repo_path: "/opt/cg-mqtt"
-    service: ""mosquitto"
+    service: "mosquitto"
     branch: "master"
     has_frontend: false
     has_backend: true
