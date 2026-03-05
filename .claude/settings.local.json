@@ -15,7 +15,8 @@
       "Bash(git config http.postBuffer 524288000)",
       "Bash(npm install --package-lock-only)",
       "Bash(git add backend/app/main.py backend/app/config.py config.yaml.example frontend/package.json frontend/package-lock.json frontend/src/components/Layout.tsx deploy/install.sh README.md)",
-      "Bash(git push origin main v0.2.0)"
+      "Bash(git push origin main v0.2.0)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

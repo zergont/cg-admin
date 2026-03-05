@@ -46,7 +46,7 @@ services:
       unit: "cg-dashboard"
       url: "https://192.168.0.130:9443"
     - name: "Modbus-декодер"
-      unit: "telemetry2"
+      unit: "cg-decoder"
       url: "http://192.168.0.130:8080"
     - name: "DB-Writer"
       unit: "cg-db-writer"
@@ -78,15 +78,15 @@ modules:
 
   - name: "Modbus-декодер"
     repo: "https://github.com/zergont/telemetry2"
-    repo_path: "/home/telemetry2"
-    service: "telemetry2"
+    repo_path: "/opt/cg-decoder"
+    service: "cg-decoder"
     branch: "master"
     has_frontend: true
     has_backend: true
 
   - name: "DB-Writer"
     repo: "https://github.com/zergont/DB_MQTT"
-    repo_path: "/home/db-writer"
+    repo_path: "/home/folist/db-writer"
     service: "cg-db-writer"
     branch: "master"
     has_frontend: false
@@ -94,11 +94,11 @@ modules:
 
   - name: "MQTT Server"
     repo: "https://github.com/zergont/MQTT_Server"
-    repo_path: "/opt/cg-mqtt"
+    repo_path: "/opt/cg-mqtt-broker"
     service: "mosquitto"
     branch: "master"
     has_frontend: false
-    has_backend: true
+    has_backend: false
 
   - name: "Admin Panel"
     repo: "https://github.com/zergont/cg-admin"
