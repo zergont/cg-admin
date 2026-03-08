@@ -63,10 +63,20 @@ def main() -> int:
         req_file = req_backend if req_backend.exists() else req_root
 
         if req_file.exists():
-            venv_pip_backend = repo_path / "backend" / ".venv" / "bin" / "pip"
-            venv_pip_root = repo_path / ".venv" / "bin" / "pip"
-            pip_bin = venv_pip_backend if venv_pip_backend.exists() else venv_pip_root
-            run([str(pip_bin) if pip_bin.exists() else "pip", "install", "-r", str(req_file)], cwd=repo_path)
+            # Ищем pip в venv: .venv/ и venv/ (оба варианта), в backend/ и в корне
+            pip_candidates = [
+                repo_path / "backend" / ".venv" / "bin" / "pip",
+                repo_path / "backend" / "venv" / "bin" / "pip",
+                repo_path / ".venv" / "bin" / "pip",
+                repo_path / "venv" / "bin" / "pip",
+            ]
+            pip_bin = next((p for p in pip_candidates if p.exists()), None)
+            if pip_bin is None:
+                raise RuntimeError(
+                    f"No venv found for {repo_path}. "
+                    f"Checked: {', '.join(str(p.parent.parent) for p in pip_candidates)}"
+                )
+            run([str(pip_bin), "install", "-r", str(req_file)], cwd=repo_path)
 
     # 3) frontend build
     if has_frontend:

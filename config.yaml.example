@@ -33,7 +33,7 @@ services:
   # Allowlist systemd юнитов — только эти можно рестартить через API
   allowed_units:
     - cg-dashboard
-    - telemetry2
+    - cg-decoder
     - cg-db-writer
     - mosquitto
     - nginx
@@ -81,7 +81,7 @@ modules:
     repo_path: "/opt/cg-decoder"
     service: "cg-decoder"
     branch: "master"
-    has_frontend: true
+    has_frontend: false
     has_backend: true
 
   - name: "DB-Writer"
