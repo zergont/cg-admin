@@ -35,6 +35,8 @@ def load_module_by_service(service_name: str) -> dict:
 def ensure_git_repo(path: Path) -> None:
     if not path.exists() or not (path / ".git").exists():
         raise RuntimeError(f"Repo path is not a git repository: {path}")
+    # Service runs as root; repo may be owned by another user — mark as safe
+    run(["git", "config", "--global", "--add", "safe.directory", str(path)])
 
 
 def main() -> int:
