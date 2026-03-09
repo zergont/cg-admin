@@ -66,7 +66,7 @@ if [[ -d "$APP_DIR/.git" ]]; then
     [[ -n "$CURRENT_BRANCH" ]] || CURRENT_BRANCH="main"
 
     info "Получаю обновления из origin/$CURRENT_BRANCH (текущая: $OLD_VERSION)…"
-    git fetch origin "$CURRENT_BRANCH"
+    git fetch --tags origin "$CURRENT_BRANCH"
     git reset --hard "origin/$CURRENT_BRANCH"
 
     NEW_COMMIT=$(git rev-parse HEAD)
