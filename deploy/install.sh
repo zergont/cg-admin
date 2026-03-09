@@ -146,7 +146,7 @@ if [[ ! -f "$APP_DIR/config.yaml" ]]; then
 else
     info "config.yaml уже существует"
 
-    # ── Миграция: пароль PostgreSQL ───────────────────────────
+    # ── Миграция: пароль PostgreSQL — всегда синхронизируем с dashboard ──
     if [[ -f "$DASHBOARD_CONFIG" ]]; then
         PG_PASS=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$DASHBOARD_CONFIG" 2>/dev/null \
                || grep -oP "(?<=postgres_password:\s')[^']+" "$DASHBOARD_CONFIG" 2>/dev/null \
@@ -155,13 +155,16 @@ else
         CURRENT_PG=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$APP_DIR/config.yaml" 2>/dev/null \
                   || grep -oP '(?<=postgres_password:\s)\S+' "$APP_DIR/config.yaml" 2>/dev/null \
                   || echo "")
-        if [[ -n "$PG_PASS" && "$PG_PASS" != "CHANGE_ME"* && \
-              ( -z "$CURRENT_PG" || "$CURRENT_PG" == "cg_ui" || "$CURRENT_PG" == "CHANGE_ME"* ) ]]; then
-            info "Обновляю postgres_password из $DASHBOARD_CONFIG…"
-            sed -i "s|postgres_password:.*|postgres_password: \"$PG_PASS\"|" "$APP_DIR/config.yaml"
-            info "Пароль PostgreSQL обновлён"
+        if [[ -n "$PG_PASS" && "$PG_PASS" != "CHANGE_ME"* ]]; then
+            if [[ "$PG_PASS" != "$CURRENT_PG" ]]; then
+                info "Синхронизирую postgres_password из $DASHBOARD_CONFIG…"
+                sed -i "s|postgres_password:.*|postgres_password: \"$PG_PASS\"|" "$APP_DIR/config.yaml"
+                info "Пароль PostgreSQL обновлён"
+            else
+                info "postgres_password актуален — пропускаю"
+            fi
         else
-            info "postgres_password уже настроен — пропускаю"
+            warn "postgres_password не найден в $DASHBOARD_CONFIG — проверьте вручную"
         fi
     else
         warn "UI Dashboard конфиг не найден ($DASHBOARD_CONFIG) — postgres_password не обновлён"
