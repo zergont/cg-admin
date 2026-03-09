@@ -120,12 +120,28 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
                         duration_ms=elapsed,
                     )
                 data: dict = await resp.json(content_type=None)
-                routers = data.get("routers_count", data.get("routers", 0))
-                panels = data.get("panels_count", data.get("panels", 0))
-                version = data.get("version", data.get("app_version", ""))
-                details = []
-                if version:
-                    details.append(f"Версия: {version}")
+                # telemetry2 /api/stats → {"store": {...}, "mqtt": {...}}
+                store: dict = data.get("store", {})
+                mqtt_info: dict = data.get("mqtt") or {}
+
+                routers = store.get("routers", 0)
+                panels  = store.get("panels",  0)
+                online  = store.get("online",  0)
+                stale   = store.get("stale",   0)
+                offline = store.get("offline", 0)
+
+                mqtt_connected = mqtt_info.get("connected", False)
+                msgs_received  = mqtt_info.get("messages_received", 0)
+                msgs_decoded   = mqtt_info.get("messages_decoded",  0)
+                decode_errors  = mqtt_info.get("decode_errors",     0)
+
+                details = [
+                    f"Панели: {online} online / {stale} stale / {offline} offline",
+                    f"MQTT: {'подключён' if mqtt_connected else 'отключён'}, "
+                    f"получено {msgs_received}, декодировано {msgs_decoded}, "
+                    f"ошибок {decode_errors}",
+                ]
+
                 if routers == 0:
                     return DiagnosticsStep(
                         id="decoder",
@@ -139,7 +155,7 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
                     id="decoder",
                     name="Декодер (cg-decoder)",
                     status=StepStatus.ok,
-                    message=f"{routers} роутеров, {panels} панелей",
+                    message=f"{routers} роутеров, {panels} панелей ({online} online)",
                     details=details,
                     duration_ms=elapsed,
                 )
