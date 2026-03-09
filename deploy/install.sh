@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# CG Admin Panel — install.sh v0.3.0
+# CG Admin Panel — install.sh v0.3.1
 # ============================================================
 set -euo pipefail
 
@@ -43,20 +43,31 @@ fi
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 
 IS_UPDATE=false
+OLD_VERSION="unknown"
+NEW_VERSION="unknown"
+
 if [[ -d "$APP_DIR/.git" ]]; then
     IS_UPDATE=true
     info "Репозиторий уже существует — режим обновления"
     cd "$APP_DIR"
 
+    # Запоминаем текущую версию ДО обновления
+    OLD_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
+
     CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
     [[ -n "$CURRENT_BRANCH" ]] || CURRENT_BRANCH="main"
 
-    info "Обновляю код из origin/$CURRENT_BRANCH…"
+    info "Обновляю код из origin/$CURRENT_BRANCH (с $OLD_VERSION)…"
     git fetch origin "$CURRENT_BRANCH"
     git reset --hard "origin/$CURRENT_BRANCH"
+
+    # Новая версия ПОСЛЕ обновления
+    NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
 else
     info "Клонирую репозиторий…"
     git clone "$REPO_URL" "$APP_DIR"
+    cd "$APP_DIR"
+    NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
 fi
 
 chown -R "$APP_USER":"$APP_USER" "$APP_DIR"
@@ -213,9 +224,13 @@ systemctl status "$SERVICE_NAME" --no-pager
 echo ""
 info "============================================================"
 if [[ "$IS_UPDATE" == true ]]; then
-    info "  CG Admin Panel v0.3.0 обновлена!"
+    if [[ "$OLD_VERSION" != "$NEW_VERSION" ]]; then
+        info "  CG Admin Panel обновлена: $OLD_VERSION → $NEW_VERSION"
+    else
+        info "  CG Admin Panel переустановлена: $NEW_VERSION (изменений версии нет)"
+    fi
 else
-    info "  CG Admin Panel v0.3.0 установлена!"
+    info "  CG Admin Panel установлена: $NEW_VERSION"
 fi
 info "  URL:    https://192.168.0.130:9443/admin/"
 info "  Config: $APP_DIR/config.yaml"
