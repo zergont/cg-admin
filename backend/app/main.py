@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from app.config import get_settings
 from app.database import init_db, close_db
-from app.routers import overview, services, updates, audit, diagnostics
+from app.routers import overview, services, updates, audit, diagnostics, auth
 
 
 @asynccontextmanager
@@ -29,6 +29,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(auth.router)
 app.include_router(overview.router)
 app.include_router(services.router)
 app.include_router(updates.router)

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { setToken, getToken } from "@/lib/api";
+import { setToken, getToken, apiFetch } from "@/lib/api";
 
 const NAV = [
   { to: "/", label: "Обзор", icon: LayoutDashboard, end: true },
@@ -32,6 +32,22 @@ export function Layout() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [hasToken, setHasToken] = useState(() => !!getToken());
+
+  // Авто-fetch токена с сервера для LAN auto-admin пользователей
+  useEffect(() => {
+    if (getToken()) return; // уже есть токен из localStorage
+    apiFetch<{ token: string }>("/auth/token")
+      .then(({ token }) => {
+        if (token) {
+          setToken(token);
+          localStorage.setItem("cg-admin-token", token);
+          setHasToken(true);
+        }
+      })
+      .catch(() => {
+        // Не на LAN — молча ждём ручного ввода
+      });
+  }, []);
 
   function openTokenDialog() {
     setInputValue(getToken());
