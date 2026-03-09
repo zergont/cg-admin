@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# CG Admin Panel — install.sh v0.2.0
+# CG Admin Panel — install.sh v0.3.0
 # ============================================================
 set -euo pipefail
 
@@ -106,7 +106,27 @@ if [[ ! -f "$APP_DIR/config.yaml" ]]; then
         warn "Укажите token и postgres_password вручную в $APP_DIR/config.yaml"
     fi
 else
-    info "config.yaml уже существует — пропускаю"
+    info "config.yaml уже существует"
+
+    # ── Миграция: добавляем секцию diagnostics если её нет ──
+    if ! grep -q "^diagnostics:" "$APP_DIR/config.yaml"; then
+        info "Добавляю секцию diagnostics в config.yaml…"
+        cat >> "$APP_DIR/config.yaml" << 'YAML'
+
+diagnostics:
+  db_writer_health_url: "http://127.0.0.1:8765/health"
+  mqtt_host: "localhost"
+  mqtt_port: 1883
+  mqtt_smoke_timeout_sec: 3.0
+  latest_state_stale_sec: 300
+  decoder_health_url: "http://127.0.0.1:8080/api/stats"
+  dashboard_health_url: "http://127.0.0.1:5555/api/health"
+YAML
+        info "Секция diagnostics добавлена (дефолтные значения)"
+        info "При необходимости отредактируйте: $APP_DIR/config.yaml"
+    else
+        info "Секция diagnostics уже есть — пропускаю"
+    fi
 fi
 
 # ── 7. SQLite директория ────────────────────────────────────
@@ -172,9 +192,9 @@ systemctl status "$SERVICE_NAME" --no-pager
 echo ""
 info "============================================================"
 if [[ "$IS_UPDATE" == true ]]; then
-    info "  CG Admin Panel v0.2.0 обновлена!"
+    info "  CG Admin Panel v0.3.0 обновлена!"
 else
-    info "  CG Admin Panel v0.2.0 установлена!"
+    info "  CG Admin Panel v0.3.0 установлена!"
 fi
 info "  URL:    https://192.168.0.130:9443/admin/"
 info "  Config: $APP_DIR/config.yaml"
