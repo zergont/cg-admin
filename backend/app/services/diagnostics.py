@@ -94,14 +94,14 @@ async def check_mqtt_flow(cfg: DiagnosticsSettings) -> DiagnosticsStep:
         )
 
 
-# ── Шаг 3: telemetry2 (декодер) жив ──────────────────────────
+# ── Шаг 3: cg-decoder жив ──────────────────────────
 
 
 async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
     if not cfg.decoder_health_url:
         return DiagnosticsStep(
             id="decoder",
-            name="Декодер (telemetry2)",
+            name="Декодер (cg-decoder)",
             status=StepStatus.skip,
             message="URL не настроен в конфиге",
         )
@@ -114,7 +114,7 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
                 if resp.status != 200:
                     return DiagnosticsStep(
                         id="decoder",
-                        name="Декодер (telemetry2)",
+                        name="Декодер (cg-decoder)",
                         status=StepStatus.crit,
                         message=f"HTTP {resp.status}",
                         duration_ms=elapsed,
@@ -129,7 +129,7 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
                 if routers == 0:
                     return DiagnosticsStep(
                         id="decoder",
-                        name="Декодер (telemetry2)",
+                        name="Декодер (cg-decoder)",
                         status=StepStatus.warn,
                         message="Сервис жив, роутеров 0",
                         details=details,
@@ -137,7 +137,7 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
                     )
                 return DiagnosticsStep(
                     id="decoder",
-                    name="Декодер (telemetry2)",
+                    name="Декодер (cg-decoder)",
                     status=StepStatus.ok,
                     message=f"{routers} роутеров, {panels} панелей",
                     details=details,
@@ -147,7 +147,7 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
         elapsed = int((time.monotonic() - t0) * 1000)
         return DiagnosticsStep(
             id="decoder",
-            name="Декодер (telemetry2)",
+            name="Декодер (cg-decoder)",
             status=StepStatus.crit,
             message="Сервис недоступен (connection refused)",
             details=[str(e)],
@@ -157,7 +157,7 @@ async def check_decoder(cfg: DiagnosticsSettings) -> DiagnosticsStep:
         elapsed = int((time.monotonic() - t0) * 1000)
         return DiagnosticsStep(
             id="decoder",
-            name="Декодер (telemetry2)",
+            name="Декодер (cg-decoder)",
             status=StepStatus.crit,
             message=f"Ошибка: {e}",
             duration_ms=elapsed,

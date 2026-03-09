@@ -108,7 +108,28 @@ if [[ ! -f "$APP_DIR/config.yaml" ]]; then
 else
     info "config.yaml уже существует"
 
-    # ── Миграция: добавляем секцию diagnostics если её нет ──
+    # ── Миграция: пароль PostgreSQL ───────────────────────────
+    if [[ -f "$DASHBOARD_CONFIG" ]]; then
+        PG_PASS=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$DASHBOARD_CONFIG" 2>/dev/null \
+               || grep -oP "(?<=postgres_password:\s')[^']+" "$DASHBOARD_CONFIG" 2>/dev/null \
+               || grep -oP '(?<=postgres_password:\s)\S+' "$DASHBOARD_CONFIG" 2>/dev/null \
+               || echo "")
+        CURRENT_PG=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$APP_DIR/config.yaml" 2>/dev/null \
+                  || grep -oP '(?<=postgres_password:\s)\S+' "$APP_DIR/config.yaml" 2>/dev/null \
+                  || echo "")
+        if [[ -n "$PG_PASS" && "$PG_PASS" != "CHANGE_ME"* && \
+              ( -z "$CURRENT_PG" || "$CURRENT_PG" == "cg_ui" || "$CURRENT_PG" == "CHANGE_ME"* ) ]]; then
+            info "Обновляю postgres_password из $DASHBOARD_CONFIG…"
+            sed -i "s|postgres_password:.*|postgres_password: \"$PG_PASS\"|" "$APP_DIR/config.yaml"
+            info "Пароль PostgreSQL обновлён"
+        else
+            info "postgres_password уже настроен — пропускаю"
+        fi
+    else
+        warn "UI Dashboard конфиг не найден ($DASHBOARD_CONFIG) — postgres_password не обновлён"
+    fi
+
+    # ── Миграция: добавляем секцию diagnostics если её нет ────
     if ! grep -q "^diagnostics:" "$APP_DIR/config.yaml"; then
         info "Добавляю секцию diagnostics в config.yaml…"
         cat >> "$APP_DIR/config.yaml" << 'YAML'
