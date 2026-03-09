@@ -25,6 +25,21 @@ info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
+# Читает пароль PostgreSQL для пользователя cg_ui из конфига dashboard.
+# Поддерживает два формата:
+#   database.ui_password (UI-telemetry / cg-dashboard)
+#   postgres_password    (прямое поле, старый формат)
+_read_pg_pass() {
+    local file="$1"
+    grep -oP '(?<=ui_password:\s")[^"]+' "$file" 2>/dev/null \
+    || grep -oP "(?<=ui_password:\s')[^']+" "$file" 2>/dev/null \
+    || grep -oP '(?<=ui_password:\s)\S+' "$file" 2>/dev/null \
+    || grep -oP '(?<=postgres_password:\s")[^"]+' "$file" 2>/dev/null \
+    || grep -oP "(?<=postgres_password:\s')[^']+" "$file" 2>/dev/null \
+    || grep -oP '(?<=postgres_password:\s)\S+' "$file" 2>/dev/null \
+    || echo ""
+}
+
 # ── Проверка root ────────────────────────────────────────────
 [[ $EUID -eq 0 ]] || error "Запустите от root: sudo bash install.sh"
 
@@ -132,9 +147,7 @@ if [[ ! -f "$APP_DIR/config.yaml" ]]; then
             warn "Токен в Dashboard не найден — укажите вручную в $APP_DIR/config.yaml"
         fi
 
-        PG_PASS=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$DASHBOARD_CONFIG" 2>/dev/null \
-               || grep -oP '(?<=postgres_password:\s)\S+' "$DASHBOARD_CONFIG" 2>/dev/null \
-               || echo "")
+        PG_PASS=$(_read_pg_pass "$DASHBOARD_CONFIG")
         if [[ -n "$PG_PASS" && "$PG_PASS" != "CHANGE_ME"* ]]; then
             info "PostgreSQL пароль найден — подставляю"
             sed -i "s|postgres_password: \"CHANGE_ME\"|postgres_password: \"$PG_PASS\"|" "$APP_DIR/config.yaml"
@@ -148,13 +161,8 @@ else
 
     # ── Миграция: пароль PostgreSQL — всегда синхронизируем с dashboard ──
     if [[ -f "$DASHBOARD_CONFIG" ]]; then
-        PG_PASS=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$DASHBOARD_CONFIG" 2>/dev/null \
-               || grep -oP "(?<=postgres_password:\s')[^']+" "$DASHBOARD_CONFIG" 2>/dev/null \
-               || grep -oP '(?<=postgres_password:\s)\S+' "$DASHBOARD_CONFIG" 2>/dev/null \
-               || echo "")
-        CURRENT_PG=$(grep -oP '(?<=postgres_password:\s")[^"]+' "$APP_DIR/config.yaml" 2>/dev/null \
-                  || grep -oP '(?<=postgres_password:\s)\S+' "$APP_DIR/config.yaml" 2>/dev/null \
-                  || echo "")
+        PG_PASS=$(_read_pg_pass "$DASHBOARD_CONFIG")
+        CURRENT_PG=$(_read_pg_pass "$APP_DIR/config.yaml")
         if [[ -n "$PG_PASS" && "$PG_PASS" != "CHANGE_ME"* ]]; then
             if [[ "$PG_PASS" != "$CURRENT_PG" ]]; then
                 info "Синхронизирую postgres_password из $DASHBOARD_CONFIG…"
