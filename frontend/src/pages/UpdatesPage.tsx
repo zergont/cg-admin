@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Check, Loader2, AlertCircle, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -80,6 +80,13 @@ export function UpdatesPage() {
 
   const status = statusQuery.data;
   const isFinished = status?.state === "done" || status?.state === "error";
+
+  // Автоматически обновляем список модулей когда обновление завершилось
+  useEffect(() => {
+    if (isFinished) {
+      queryClient.invalidateQueries({ queryKey: ["updates"] });
+    }
+  }, [isFinished, queryClient]);
 
   if (isLoading) {
     return (
