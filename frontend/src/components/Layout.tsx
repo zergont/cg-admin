@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ArrowDownToLine,
   ScrollText,
+  Stethoscope,
   ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ const NAV = [
   { to: "/", label: "Обзор", icon: LayoutDashboard, end: true },
   { to: "/updates", label: "Обновления", icon: ArrowDownToLine, end: false },
   { to: "/audit", label: "Аудит", icon: ScrollText, end: false },
+  { to: "/diagnostics", label: "Диагностика", icon: Stethoscope, end: false },
 ] as const;
 
 export function Layout() {
@@ -30,7 +32,7 @@ export function Layout() {
             </Button>
             <Separator orientation="vertical" className="h-5" />
             <h1 className="text-lg font-semibold tracking-tight">CG Admin</h1>
-            <span className="text-xs text-muted-foreground">v0.2.0</span>
+            <span className="text-xs text-muted-foreground">v0.3.0</span>
           </div>
 
           <nav className="flex items-center gap-1">

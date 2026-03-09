@@ -1,5 +1,7 @@
 """Pydantic-схемы ответов API."""
 
+from enum import Enum
+
 from pydantic import BaseModel
 
 
@@ -77,6 +79,32 @@ class UpdateStatus(BaseModel):
     progress: str = ""
     log: list[str] = []
     error: str | None = None
+
+
+# ── Diagnostics ──────────────────────────────────────────────
+
+
+class StepStatus(str, Enum):
+    ok = "ok"
+    warn = "warn"
+    crit = "crit"
+    skip = "skip"
+
+
+class DiagnosticsStep(BaseModel):
+    id: str
+    name: str
+    status: StepStatus
+    message: str
+    details: list[str] = []
+    duration_ms: int = 0
+
+
+class DiagnosticsReport(BaseModel):
+    started_at: str
+    duration_ms: int
+    overall: StepStatus
+    steps: list[DiagnosticsStep]
 
 
 # ── Audit ────────────────────────────────────────────────────

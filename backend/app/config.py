@@ -13,7 +13,7 @@ from pydantic import BaseModel, model_validator
 
 class AppSettings(BaseModel):
     name: str = "CG Admin"
-    version: str = "0.2.0"
+    version: str = "0.3.0"
     debug: bool = False
 
 
@@ -71,12 +71,24 @@ class ServicesSettings(BaseModel):
     ]
 
 
+class DiagnosticsSettings(BaseModel):
+    db_writer_health_url: str = "http://127.0.0.1:8765/health"
+    mqtt_host: str = "localhost"
+    mqtt_port: int = 1883
+    mqtt_smoke_topic: str = "cg/v1/diagnostics/ping"
+    mqtt_smoke_timeout_sec: float = 3.0
+    latest_state_stale_sec: int = 300
+    decoder_health_url: str = "http://127.0.0.1:8080/api/stats"
+    dashboard_health_url: str = "http://127.0.0.1:5555/api/health"
+
+
 class Settings(BaseModel):
     app: AppSettings = AppSettings()
     auth: AuthSettings
     database: DatabaseSettings = DatabaseSettings()
     services: ServicesSettings = ServicesSettings()
     modules: list[ModuleSettings] = []
+    diagnostics: DiagnosticsSettings = DiagnosticsSettings()
 
 
 # ── Загрузка ─────────────────────────────────────────────────

@@ -1,13 +1,13 @@
 # ============================================================
 # CG Admin Panel — config.yaml
-# Версия конфига: 0.2.1
+# Версия конфига: 0.3.0
 # ============================================================
 # Скопируйте в config.yaml и заполните значения.
 # Путь задаётся через переменную CG_ADMIN_CONFIG.
 
 app:
   name: "CG Admin"
-  version: "0.2.1"
+  version: "0.3.0"
   debug: false
 
 auth:
@@ -66,6 +66,20 @@ services:
     - name: "Admin Panel"
       unit: "cg-admin"
       url: "https://192.168.0.130:9443/admin/"
+
+diagnostics:
+  # DB-Writer health endpoint
+  db_writer_health_url: "http://127.0.0.1:8765/health"
+  # MQTT-брокер
+  mqtt_host: "localhost"
+  mqtt_port: 1883
+  mqtt_smoke_timeout_sec: 3.0
+  # Данные в latest_state протухли если старше N секунд
+  latest_state_stale_sec: 300
+  # telemetry2 (декодер) stats endpoint
+  decoder_health_url: "http://127.0.0.1:8080/api/stats"
+  # UI Dashboard health endpoint (оставьте пустым чтобы пропустить проверку)
+  dashboard_health_url: "http://127.0.0.1:5555/api/health"
 
 modules:
   - name: "UI Dashboard"
