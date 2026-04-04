@@ -75,7 +75,7 @@ export function Layout() {
             </Button>
             <Separator orientation="vertical" className="h-5" />
             <h1 className="text-lg font-semibold tracking-tight">CG Admin</h1>
-            <span className="text-xs text-muted-foreground">v0.3.1</span>
+            <span className="text-xs text-muted-foreground">v0.3.2</span>
           </div>
 
           <div className="flex items-center gap-2">

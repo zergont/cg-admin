@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# CG Admin Panel — install.sh v0.3.1
+# CG Admin Panel — install.sh v0.3.2
 # Использование: sudo bash install.sh [--force]
 #   --force  принудительная пересборка даже без новых коммитов
 # ============================================================
@@ -202,6 +202,26 @@ fi
 # ── 7. SQLite директория ────────────────────────────────────
 mkdir -p "$APP_DIR/data"
 chown "$APP_USER":"$APP_USER" "$APP_DIR/data"
+
+# ── 7b. Права на репозитории модулей ────────────────────────
+# Репозитории могут быть склонированы от root — выравниваем права,
+# чтобы бэкенд (user=cg) мог выполнять git fetch для проверки обновлений.
+if [[ -f "$APP_DIR/config.yaml" ]]; then
+    info "Проверяю права на репозитории модулей…"
+    while IFS= read -r repo_path; do
+        [[ -z "$repo_path" ]] && continue
+        if [[ -d "$repo_path" ]]; then
+            chown -R "$APP_USER":"$APP_USER" "$repo_path"
+            info "  chown $APP_USER:$APP_USER $repo_path"
+        fi
+    done < <(python3.12 -c "
+import yaml, sys
+cfg = yaml.safe_load(open('$APP_DIR/config.yaml'))
+for m in cfg.get('modules', []):
+    p = m.get('repo_path', '')
+    if p: print(p)
+" 2>/dev/null)
+fi
 
 # ── 8. systemd unit ─────────────────────────────────────────
 info "Устанавливаю systemd unit…"

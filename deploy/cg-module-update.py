@@ -37,6 +37,8 @@ def ensure_git_repo(path: Path) -> None:
         raise RuntimeError(f"Repo path is not a git repository: {path}")
     # Service runs as root; repo may be owned by another user — mark as safe
     run(["git", "config", "--global", "--add", "safe.directory", str(path)])
+    # Fix ownership so cg-admin backend (runs as cg) can read/write git refs
+    run(["chown", "-R", "cg:cg", str(path)])
 
 
 def main() -> int:
