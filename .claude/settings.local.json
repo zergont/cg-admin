@@ -16,7 +16,21 @@
       "Bash(npm install --package-lock-only)",
       "Bash(git add backend/app/main.py backend/app/config.py config.yaml.example frontend/package.json frontend/package-lock.json frontend/src/components/Layout.tsx deploy/install.sh README.md)",
       "Bash(git push origin main v0.2.0)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(git add config.yaml.example deploy/cg-module-update.py)",
+      "Bash(git push)",
+      "Bash(git push origin main --tags)",
+      "Bash(git add deploy/install.sh)",
+      "Bash(git add backend/app/services/diagnostics.py deploy/install.sh)",
+      "Bash(git add backend/app/services/diagnostics.py)",
+      "Bash(git add backend/app/main.py backend/app/config.py frontend/package.json frontend/src/components/Layout.tsx config.yaml.example deploy/install.sh)",
+      "Bash(ssh -o ConnectTimeout=5 -o BatchMode=yes cg@192.168.0.130 \"echo connected\")",
+      "Bash(git add frontend/src/components/Layout.tsx frontend/src/main.tsx)",
+      "Bash(git add backend/app/routers/auth.py backend/app/main.py frontend/src/components/Layout.tsx)",
+      "Bash(git add frontend/src/pages/UpdatesPage.tsx)",
+      "Bash(git add deploy/cg-module-update.py)",
+      "Bash(git add:*)",
+      "Bash(git tag:*)"
     ]
   }
 }
