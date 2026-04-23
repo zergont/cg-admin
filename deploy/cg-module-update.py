@@ -32,13 +32,32 @@ def load_module_by_service(service_name: str) -> dict:
     return module
 
 
-def ensure_git_repo(path: Path) -> None:
+def get_service_user(service_name: str) -> str | None:
+    """Get User= from systemd service unit. Returns None if not found."""
+    result = subprocess.run(
+        ["systemctl", "show", f"{service_name}.service", "--property=User", "--value"],
+        capture_output=True, text=True,
+    )
+    user = result.stdout.strip()
+    return user if user and user != "[not set]" else None
+
+
+def ensure_git_repo(path: Path, service_name: str | None = None) -> None:
     if not path.exists() or not (path / ".git").exists():
         raise RuntimeError(f"Repo path is not a git repository: {path}")
     # Service runs as root; repo may be owned by another user — mark as safe
     run(["git", "config", "--global", "--add", "safe.directory", str(path)])
     # Fix ownership so cg-admin backend (runs as cg) can read/write git refs
     run(["chown", "-R", "cg:cg", str(path)])
+    # Restore ownership of user-data directories (maps/) to the actual service user
+    # so the service can write to them after update
+    if service_name:
+        svc_user = get_service_user(service_name)
+        if svc_user and svc_user != "cg":
+            maps_path = path / "maps"
+            if maps_path.exists():
+                print(f"Restoring {maps_path} ownership to {svc_user}:{svc_user}")
+                run(["chown", "-R", f"{svc_user}:{svc_user}", str(maps_path)])
 
 
 def main() -> int:
@@ -54,7 +73,7 @@ def main() -> int:
     has_backend = bool(module.get("has_backend", True))
     has_frontend = bool(module.get("has_frontend", False))
 
-    ensure_git_repo(repo_path)
+    ensure_git_repo(repo_path, service_name)
 
     # 1) git update
     run(["git", "fetch", "origin", branch], cwd=repo_path)
