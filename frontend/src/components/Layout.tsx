@@ -32,6 +32,13 @@ export function Layout() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [hasToken, setHasToken] = useState(() => !!getToken());
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<{ version: string; git_tag: string | null }>("/system/version")
+      .then(({ git_tag, version }) => setVersion(git_tag ?? version))
+      .catch(() => {});
+  }, []);
 
   // Авто-fetch токена с сервера для LAN auto-admin пользователей
   useEffect(() => {
@@ -75,7 +82,9 @@ export function Layout() {
             </Button>
             <Separator orientation="vertical" className="h-5" />
             <h1 className="text-lg font-semibold tracking-tight">CG Admin</h1>
-            <span className="text-xs text-muted-foreground">v0.3.2</span>
+            {version && (
+              <span className="text-xs text-muted-foreground">{version}</span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
