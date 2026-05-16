@@ -1,6 +1,6 @@
 """CG Admin Panel — FastAPI backend."""
 
-__version__ = "0.3.2"
+__version__ = "1.0.0"
 
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from app.config import get_settings
 from app.database import init_db, close_db
-from app.routers import overview, services, updates, audit, diagnostics, auth
+from app.routers import overview, services, updates, audit, diagnostics, auth, system
 
 
 @asynccontextmanager
@@ -35,3 +35,4 @@ app.include_router(services.router)
 app.include_router(updates.router)
 app.include_router(audit.router)
 app.include_router(diagnostics.router)
+app.include_router(system.router)

@@ -27,8 +27,6 @@ def load_module_by_service(service_name: str) -> dict:
     module = next((m for m in modules if m.get("service") == service_name), None)
     if not module:
         raise RuntimeError(f"Module with service '{service_name}' not found")
-    if module.get("self") is True:
-        raise RuntimeError("Self update for cg-admin is forbidden")
     return module
 
 
