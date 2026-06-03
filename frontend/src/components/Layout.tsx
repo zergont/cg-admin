@@ -36,7 +36,7 @@ export function Layout() {
 
   useEffect(() => {
     apiFetch<{ version: string; git_tag: string | null }>("/system/version")
-      .then(({ git_tag, version }) => setVersion(git_tag ?? version))
+      .then(({ version }) => setVersion(`v${version}`))
       .catch(() => {});
   }, []);
 
