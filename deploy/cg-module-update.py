@@ -74,7 +74,7 @@ def main() -> int:
     ensure_git_repo(repo_path, service_name)
 
     # 1) git update
-    run(["git", "fetch", "origin", branch], cwd=repo_path)
+    run(["git", "fetch", "origin", branch, "--tags"], cwd=repo_path)
     run(["git", "reset", "--hard", f"origin/{branch}"], cwd=repo_path)
 
     # 2) backend deps
