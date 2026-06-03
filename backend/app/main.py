@@ -1,6 +1,6 @@
 """CG Admin Panel — FastAPI backend."""
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 from contextlib import asynccontextmanager
 from typing import AsyncIterator

@@ -52,7 +52,14 @@ async def _ensure_safe_directory(repo_path: str) -> None:
     _safe_dirs.add(repo_path)
 
 
+async def _fix_git_ownership(repo_path: str) -> None:
+    """Исправляет владельца .git/ если репо было склонировано не от cg."""
+    git_dir = str(Path(repo_path) / ".git")
+    await _run(["sudo", "chown", "-R", "cg:cg", git_dir])
+
+
 async def _git_fetch(repo_path: str) -> None:
+    await _fix_git_ownership(repo_path)
     _, stderr, code = await _run(["git", "fetch", "--all"], cwd=repo_path)
     if code != 0:
         raise RuntimeError(f"git fetch failed: {stderr.strip()}")
