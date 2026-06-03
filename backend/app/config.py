@@ -13,7 +13,7 @@ from pydantic import BaseModel, model_validator
 
 class AppSettings(BaseModel):
     name: str = "CG Admin"
-    version: str = "1.0.3"
+    version: str = "1.0.4"
     debug: bool = False
 
 

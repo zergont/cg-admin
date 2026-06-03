@@ -54,8 +54,17 @@ async def _ensure_safe_directory(repo_path: str) -> None:
 
 async def _fix_git_ownership(repo_path: str) -> None:
     """Исправляет владельца .git/ если репо было склонировано не от cg."""
-    git_dir = str(Path(repo_path) / ".git")
-    await _run(["sudo", "chown", "-R", "cg:cg", git_dir])
+    fetch_head = Path(repo_path) / ".git" / "FETCH_HEAD"
+    # Проверяем: если FETCH_HEAD существует и недоступен на запись — chown
+    # Если FETCH_HEAD ещё нет (первый fetch) — тоже chown .git/
+    git_dir = Path(repo_path) / ".git"
+    try:
+        if fetch_head.exists():
+            fetch_head.open("a").close()  # проба на запись
+            return  # права в порядке
+    except PermissionError:
+        pass
+    await _run(["sudo", "chown", "-R", "cg:cg", str(git_dir)])
 
 
 async def _git_fetch(repo_path: str) -> None:
