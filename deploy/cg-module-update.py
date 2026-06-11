@@ -57,8 +57,8 @@ def ensure_git_repo(path: Path, service_name: str | None = None,
     run(["git", "config", "--global", "--add", "safe.directory", str(path)])
     # Fix ownership so cg-admin backend (runs as cg) can read/write git refs
     run(["chown", "-R", "cg:cg", str(path)])
-    # Restore ownership of user-data directories to the actual service user
-    # so the service can write to them after update
+    # Restore ownership of user-data paths (dirs or files) to the actual
+    # service user so the service can write to them after update
     if service_name and data_dirs:
         svc_user = get_service_user(service_name)
         if svc_user and svc_user != "cg":

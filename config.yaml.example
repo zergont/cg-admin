@@ -97,9 +97,10 @@ modules:
     branch: "master"
     has_frontend: false
     has_backend: true
-    # Директории с пользовательскими данными — после деплоя их владелец
-    # восстанавливается на пользователя сервиса (по умолчанию ["maps"])
-    data_dirs: ["maps", "devices"]
+    # Директории и файлы с пользовательскими данными — после деплоя их
+    # владелец восстанавливается на пользователя сервиса (по умолчанию ["maps"]).
+    # Веб-морда декодера пишет в maps/, devices/ и config.yaml
+    data_dirs: ["maps", "devices", "config.yaml"]
 
   - name: "DB-Writer"
     repo: "https://github.com/zergont/DB_MQTT"
