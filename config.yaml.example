@@ -97,6 +97,9 @@ modules:
     branch: "master"
     has_frontend: false
     has_backend: true
+    # Директории с пользовательскими данными — после деплоя их владелец
+    # восстанавливается на пользователя сервиса (по умолчанию ["maps"])
+    data_dirs: ["maps", "devices"]
 
   - name: "DB-Writer"
     repo: "https://github.com/zergont/DB_MQTT"
