@@ -49,24 +49,34 @@ def get_service_user(service_name: str) -> str | None:
     return user if user and user != "[not set]" else None
 
 
-def ensure_git_repo(path: Path, service_name: str | None = None,
-                    data_dirs: list[str] | None = None) -> None:
+def ensure_git_repo(path: Path) -> None:
     if not path.exists() or not (path / ".git").exists():
         raise RuntimeError(f"Repo path is not a git repository: {path}")
     # Service runs as root; repo may be owned by another user — mark as safe
     run(["git", "config", "--global", "--add", "safe.directory", str(path)])
     # Fix ownership so cg-admin backend (runs as cg) can read/write git refs
     run(["chown", "-R", "cg:cg", str(path)])
-    # Restore ownership of user-data paths (dirs or files) to the actual
-    # service user so the service can write to them after update
-    if service_name and data_dirs:
-        svc_user = get_service_user(service_name)
-        if svc_user and svc_user != "cg":
-            for dir_name in data_dirs:
-                data_path = path / dir_name
-                if data_path.exists():
-                    print(f"Restoring {data_path} ownership to {svc_user}:{svc_user}")
-                    run(["chown", "-R", f"{svc_user}:{svc_user}", str(data_path)])
+
+
+def restore_data_ownership(path: Path, service_name: str,
+                           data_dirs: list[str]) -> None:
+    """Restore ownership of user-data paths (dirs or files) to the actual
+    service user so the service can write to them after update.
+
+    Must run AFTER git reset: tracked files rewritten by git are recreated
+    as root, so an earlier chown would be clobbered.
+    """
+    svc_user = get_service_user(service_name)
+    if not svc_user or svc_user == "cg":
+        print(f"Service user is '{svc_user}', skipping data ownership restore")
+        return
+    for dir_name in data_dirs:
+        data_path = path / dir_name
+        if data_path.exists():
+            print(f"Restoring {data_path} ownership to {svc_user}:{svc_user}")
+            run(["chown", "-R", f"{svc_user}:{svc_user}", str(data_path)])
+        else:
+            print(f"Data path {data_path} does not exist, skipping")
 
 
 def main() -> int:
@@ -84,11 +94,15 @@ def main() -> int:
 
     data_dirs = module.get("data_dirs", ["maps"])
 
-    ensure_git_repo(repo_path, service_name, data_dirs)
+    ensure_git_repo(repo_path)
 
     # 1) git update
     run(["git", "fetch", "origin", branch, "--tags"], cwd=repo_path)
     run(["git", "reset", "--hard", f"origin/{branch}"], cwd=repo_path)
+
+    # Tracked files rewritten by reset are now root-owned — restore
+    # user-data ownership only after this point
+    restore_data_ownership(repo_path, service_name, data_dirs)
 
     # 2) backend deps
     if has_backend:
