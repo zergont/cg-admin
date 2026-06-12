@@ -127,13 +127,15 @@ async def _check_single_module(m: ModuleSettings) -> ModuleUpdate:
             error=fetch_error or f"Не удалось проверить ветку origin/{m.branch}",
         )
 
+    # Даже если rev-list отработал по старым локальным ссылкам, упавший
+    # fetch означает, что результат может быть устаревшим — показываем ошибку
     return ModuleUpdate(
         module=m.name,
         current_version=version,
         current_commit=commit,
         available_commits=available,
-        up_to_date=available == 0,
-        error=None,
+        up_to_date=available == 0 and fetch_error is None,
+        error=fetch_error,
     )
 
 

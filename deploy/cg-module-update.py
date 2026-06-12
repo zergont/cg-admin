@@ -54,8 +54,6 @@ def ensure_git_repo(path: Path) -> None:
         raise RuntimeError(f"Repo path is not a git repository: {path}")
     # Service runs as root; repo may be owned by another user — mark as safe
     run(["git", "config", "--global", "--add", "safe.directory", str(path)])
-    # Fix ownership so cg-admin backend (runs as cg) can read/write git refs
-    run(["chown", "-R", "cg:cg", str(path)])
 
 
 def restore_data_ownership(path: Path, service_name: str,
@@ -100,10 +98,6 @@ def main() -> int:
     run(["git", "fetch", "origin", branch, "--tags"], cwd=repo_path)
     run(["git", "reset", "--hard", f"origin/{branch}"], cwd=repo_path)
 
-    # Tracked files rewritten by reset are now root-owned — restore
-    # user-data ownership only after this point
-    restore_data_ownership(repo_path, service_name, data_dirs)
-
     # 2) backend deps
     if has_backend:
         req_backend = repo_path / "backend" / "requirements.txt"
@@ -136,7 +130,14 @@ def main() -> int:
             run(["npm", "install"], cwd=frontend_dir)
             run(["npm", "run", "build"], cwd=frontend_dir)
 
-    # 4) restart target service
+    # 4) ownership fixes — strictly AFTER all root-mutating steps:
+    # git fetch/reset, pip and npm run as root and create root-owned files
+    # (.git/objects, venv, node_modules). Hand the repo back to cg so the
+    # cg-admin backend can fetch/check updates, then user-data to svc user.
+    run(["chown", "-R", "cg:cg", str(repo_path)])
+    restore_data_ownership(repo_path, service_name, data_dirs)
+
+    # 5) restart target service
     run(["systemctl", "restart", f"{service_name}.service"])
 
     print("Update complete")
