@@ -22,7 +22,7 @@ from pydantic import BaseModel, model_validator
 
 class AppSettings(BaseModel):
     name: str = "CG Admin"
-    version: str = "1.0.10"
+    version: str = "1.1.0"
     debug: bool = False
 
 
@@ -89,6 +89,8 @@ class DiagnosticsSettings(BaseModel):
     latest_state_stale_sec: int = 300
     decoder_health_url: str = "http://127.0.0.1:8080/api/stats"
     dashboard_health_url: str = "http://127.0.0.1:5555/api/health"
+    wg_interface: str = "wg0"
+    wg_handshake_stale_sec: int = 180
 
 
 class Settings(BaseModel):

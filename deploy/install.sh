@@ -245,6 +245,9 @@ cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart cg-mqtt.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/systemctl start cg-deploy@*.service
 cg ALL=(ALL) NOPASSWD: /usr/bin/journalctl *
+cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * latest-handshakes
+cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * transfer
+cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * endpoints
 EOF
 chmod 0440 /etc/sudoers.d/cg-admin
 

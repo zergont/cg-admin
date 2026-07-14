@@ -14,6 +14,7 @@ import { DiagnosticsStepCard, DiagnosticsStep } from "./DiagnosticsStepCard";
 
 // Фиксированный порядок шагов по id
 const STEP_ORDER = [
+  "wireguard",
   "mqtt_broker",
   "mqtt_flow",
   "decoder",

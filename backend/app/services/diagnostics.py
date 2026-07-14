@@ -7,7 +7,7 @@
 # Несанкционированное копирование, распространение или использование
 # без письменного разрешения правообладателя запрещено.
 
-"""Сервис диагностики pipeline: 6 параллельных проверок."""
+"""Сервис диагностики pipeline: 7 параллельных проверок."""
 
 import asyncio
 import time
@@ -407,6 +407,122 @@ async def check_ui_dashboard(cfg: DiagnosticsSettings) -> DiagnosticsStep:
         )
 
 
+# ── Шаг 7: WireGuard VPN-туннель без ошибок ──────────────────
+
+
+async def _run_cmd(cmd: list[str]) -> tuple[str, str, int]:
+    """Запускает команду асинхронно и возвращает (stdout, stderr, code)."""
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    return stdout.decode(), stderr.decode(), proc.returncode or 0
+
+
+def _parse_wg_lines(stdout: str) -> dict[str, list[str]]:
+    """Парсит построчный вывод `wg show <iface> <subcommand>` → {pubkey: [поля...]}."""
+    result: dict[str, list[str]] = {}
+    for line in stdout.strip().splitlines():
+        fields = line.split("\t")
+        if not fields or not fields[0]:
+            continue
+        result[fields[0]] = fields[1:]
+    return result
+
+
+async def check_wireguard(cfg: DiagnosticsSettings) -> DiagnosticsStep:
+    """Проверяет туннель через узкие подкоманды `wg show`, ни одна из которых
+    не раскрывает приватный ключ интерфейса (в отличие от `dump`/`private-key`)."""
+    t0 = time.monotonic()
+    iface = cfg.wg_interface
+    try:
+        (hs_out, hs_err, hs_code), (tr_out, _, _), (ep_out, _, _) = await asyncio.gather(
+            _run_cmd(["sudo", "wg", "show", iface, "latest-handshakes"]),
+            _run_cmd(["sudo", "wg", "show", iface, "transfer"]),
+            _run_cmd(["sudo", "wg", "show", iface, "endpoints"]),
+        )
+        elapsed = int((time.monotonic() - t0) * 1000)
+        if hs_code != 0:
+            return DiagnosticsStep(
+                id="wireguard",
+                name="WireGuard VPN",
+                status=StepStatus.crit,
+                message=f"Интерфейс {iface} недоступен",
+                details=[hs_err.strip() or f"Код выхода: {hs_code}"],
+                duration_ms=elapsed,
+            )
+
+        handshakes = _parse_wg_lines(hs_out)
+        if not handshakes:
+            return DiagnosticsStep(
+                id="wireguard",
+                name="WireGuard VPN",
+                status=StepStatus.warn,
+                message=f"Интерфейс {iface} поднят, но пиров нет",
+                duration_ms=elapsed,
+            )
+
+        transfers = _parse_wg_lines(tr_out)
+        endpoints = _parse_wg_lines(ep_out)
+
+        now = time.time()
+        details = []
+        worst = StepStatus.ok
+        stale_count = 0
+        for pubkey, fields in handshakes.items():
+            handshake = int(fields[0]) if fields and fields[0].isdigit() else 0
+            short_key = pubkey[:8] + "…"
+            endpoint_fields = endpoints.get(pubkey, [])
+            endpoint = endpoint_fields[0] if endpoint_fields else ""
+            endpoint_label = endpoint if endpoint and endpoint != "(none)" else "нет endpoint"
+
+            if handshake == 0:
+                stale_count += 1
+                worst = StepStatus.crit
+                details.append(f"{short_key} ({endpoint_label}): рукопожатий не было")
+                continue
+
+            age = int(now - handshake)
+            transfer_fields = transfers.get(pubkey, [])
+            if age > cfg.wg_handshake_stale_sec:
+                stale_count += 1
+                if worst != StepStatus.crit:
+                    worst = StepStatus.warn
+                details.append(f"{short_key} ({endpoint_label}): рукопожатие {age} сек назад")
+            else:
+                rx = int(transfer_fields[0]) if len(transfer_fields) > 0 and transfer_fields[0].isdigit() else 0
+                tx = int(transfer_fields[1]) if len(transfer_fields) > 1 and transfer_fields[1].isdigit() else 0
+                details.append(
+                    f"{short_key} ({endpoint_label}): рукопожатие {age} сек назад, "
+                    f"rx {rx:,} / tx {tx:,} байт".replace(",", " ")
+                )
+
+        if worst == StepStatus.ok:
+            message = f"{len(handshakes)} пир(ов), все рукопожатия свежие"
+        else:
+            message = f"{stale_count} из {len(handshakes)} пир(ов) без свежего рукопожатия"
+
+        return DiagnosticsStep(
+            id="wireguard",
+            name="WireGuard VPN",
+            status=worst,
+            message=message,
+            details=details,
+            duration_ms=elapsed,
+        )
+    except Exception as e:
+        elapsed = int((time.monotonic() - t0) * 1000)
+        return DiagnosticsStep(
+            id="wireguard",
+            name="WireGuard VPN",
+            status=StepStatus.crit,
+            message=f"Ошибка: {e}",
+            duration_ms=elapsed,
+        )
+
+
 # ── Оркестратор ───────────────────────────────────────────────
 
 
@@ -429,6 +545,7 @@ async def run_diagnostics(cfg: Settings) -> DiagnosticsReport:
         check_db_writer(cfg.diagnostics),
         check_database(cfg),
         check_ui_dashboard(cfg.diagnostics),
+        check_wireguard(cfg.diagnostics),
         return_exceptions=False,
     )
 
