@@ -7,8 +7,9 @@
 
 app:
   name: "CG Admin"
-  version: "1.0.0"
   debug: false
+  # Версия приложения задаётся не здесь, а в файле VERSION в корне репозитория —
+  # его читают backend (__version__) и frontend (sync-version.mjs).
 
 auth:
   # Bearer token для cg-admin (независим от токена UI Dashboard)

@@ -9,9 +9,8 @@
 
 """CG Admin Panel — FastAPI backend."""
 
-__version__ = "1.1.1"
-
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -19,6 +18,9 @@ from fastapi import FastAPI
 from app.config import get_settings
 from app.database import init_db, close_db
 from app.routers import overview, services, updates, audit, diagnostics, auth, system
+
+# Единый источник версии для backend, frontend и деплоя — файл VERSION в корне репозитория.
+__version__ = (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
 
 
 @asynccontextmanager
