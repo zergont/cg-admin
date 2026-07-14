@@ -9,8 +9,15 @@
 
 """CG Admin Panel — FastAPI backend."""
 
-from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Единый источник версии для backend, frontend и деплоя — файл VERSION в корне
+# репозитория. Должно быть определено до импорта app.routers: system.py делает
+# `from app.main import __version__`, а это циклический импорт обратно в этот
+# модуль — если __version__ ещё не присвоен на тот момент, будет ImportError.
+__version__ = (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
+
+from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
@@ -18,9 +25,6 @@ from fastapi import FastAPI
 from app.config import get_settings
 from app.database import init_db, close_db
 from app.routers import overview, services, updates, audit, diagnostics, auth, system
-
-# Единый источник версии для backend, frontend и деплоя — файл VERSION в корне репозитория.
-__version__ = (Path(__file__).resolve().parents[2] / "VERSION").read_text(encoding="utf-8").strip()
 
 
 @asynccontextmanager
