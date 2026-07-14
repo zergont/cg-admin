@@ -82,8 +82,11 @@ diagnostics:
   dashboard_health_url: "http://127.0.0.1:5555/api/health"
   # Имя интерфейса WireGuard для проверки состояния туннеля (`sudo wg show`)
   wg_interface: "wg0"
-  # Рукопожатие с пиром считается протухшим, если старше N секунд
+  # Рукопожатие с пиром считается протухшим (warn), если старше N секунд
   wg_handshake_stale_sec: 180
+  # Рукопожатие считается "залипшим" (crit) — клиент сменил IP и не может
+  # переподключиться, само не восстановится — если старше N секунд
+  wg_handshake_dead_sec: 3600
 
 modules:
   - name: "UI Dashboard"

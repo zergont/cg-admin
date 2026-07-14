@@ -248,6 +248,7 @@ cg ALL=(ALL) NOPASSWD: /usr/bin/journalctl *
 cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * latest-handshakes
 cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * transfer
 cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * endpoints
+cg ALL=(ALL) NOPASSWD: /usr/bin/wg show * allowed-ips
 EOF
 chmod 0440 /etc/sudoers.d/cg-admin
 

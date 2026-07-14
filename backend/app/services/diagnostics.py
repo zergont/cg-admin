@@ -434,14 +434,23 @@ def _parse_wg_lines(stdout: str) -> dict[str, list[str]]:
 
 async def check_wireguard(cfg: DiagnosticsSettings) -> DiagnosticsStep:
     """Проверяет туннель через узкие подкоманды `wg show`, ни одна из которых
-    не раскрывает приватный ключ интерфейса (в отличие от `dump`/`private-key`)."""
+    не раскрывает приватный ключ интерфейса (в отличие от `dump`/`private-key`).
+
+    Клиенты (телематика) периодически меняют внешний IP. Пока клиент не
+    пришлёт валидный пакет с нового адреса, WireGuard держит старый endpoint
+    и рукопожатие «зависает» — это отличается от пира, который просто ещё
+    не подключался (handshake == 0). Поэтому протухшее рукопожатие делится
+    на два уровня: warn (свежая просадка, ещё может само восстановиться) и
+    crit (висит дольше wg_handshake_dead_sec — похоже на залипание после
+    смены IP, само не восстановится, нужно вмешательство)."""
     t0 = time.monotonic()
     iface = cfg.wg_interface
     try:
-        (hs_out, hs_err, hs_code), (tr_out, _, _), (ep_out, _, _) = await asyncio.gather(
+        (hs_out, hs_err, hs_code), (tr_out, _, _), (ep_out, _, _), (ai_out, _, _) = await asyncio.gather(
             _run_cmd(["sudo", "wg", "show", iface, "latest-handshakes"]),
             _run_cmd(["sudo", "wg", "show", iface, "transfer"]),
             _run_cmd(["sudo", "wg", "show", iface, "endpoints"]),
+            _run_cmd(["sudo", "wg", "show", iface, "allowed-ips"]),
         )
         elapsed = int((time.monotonic() - t0) * 1000)
         if hs_code != 0:
@@ -466,43 +475,70 @@ async def check_wireguard(cfg: DiagnosticsSettings) -> DiagnosticsStep:
 
         transfers = _parse_wg_lines(tr_out)
         endpoints = _parse_wg_lines(ep_out)
+        allowed_ips = _parse_wg_lines(ai_out)
 
         now = time.time()
         details = []
         worst = StepStatus.ok
+        never_count = 0
+        dead_count = 0
         stale_count = 0
         for pubkey, fields in handshakes.items():
             handshake = int(fields[0]) if fields and fields[0].isdigit() else 0
             short_key = pubkey[:8] + "…"
+
             endpoint_fields = endpoints.get(pubkey, [])
             endpoint = endpoint_fields[0] if endpoint_fields else ""
             endpoint_label = endpoint if endpoint and endpoint != "(none)" else "нет endpoint"
 
+            ip_fields = allowed_ips.get(pubkey, [])
+            internal_ip = ip_fields[0] if ip_fields and ip_fields[0] else "?"
+
+            peer_label = f"{short_key} [{internal_ip}] {endpoint_label}"
+
             if handshake == 0:
-                stale_count += 1
+                never_count += 1
                 worst = StepStatus.crit
-                details.append(f"{short_key} ({endpoint_label}): рукопожатий не было")
+                details.append(f"{peer_label}: рукопожатий не было")
                 continue
 
             age = int(now - handshake)
             transfer_fields = transfers.get(pubkey, [])
-            if age > cfg.wg_handshake_stale_sec:
+
+            if age > cfg.wg_handshake_dead_sec:
+                dead_count += 1
+                worst = StepStatus.crit
+                details.append(
+                    f"{peer_label}: рукопожатие {age} сек назад — "
+                    f"похоже на залипание после смены IP клиента, само не восстановится"
+                )
+            elif age > cfg.wg_handshake_stale_sec:
                 stale_count += 1
                 if worst != StepStatus.crit:
                     worst = StepStatus.warn
-                details.append(f"{short_key} ({endpoint_label}): рукопожатие {age} сек назад")
+                details.append(
+                    f"{peer_label}: рукопожатие {age} сек назад — "
+                    f"возможно клиент сменил IP, ждём переподключения"
+                )
             else:
                 rx = int(transfer_fields[0]) if len(transfer_fields) > 0 and transfer_fields[0].isdigit() else 0
                 tx = int(transfer_fields[1]) if len(transfer_fields) > 1 and transfer_fields[1].isdigit() else 0
                 details.append(
-                    f"{short_key} ({endpoint_label}): рукопожатие {age} сек назад, "
+                    f"{peer_label}: рукопожатие {age} сек назад, "
                     f"rx {rx:,} / tx {tx:,} байт".replace(",", " ")
                 )
 
         if worst == StepStatus.ok:
             message = f"{len(handshakes)} пир(ов), все рукопожатия свежие"
         else:
-            message = f"{stale_count} из {len(handshakes)} пир(ов) без свежего рукопожатия"
+            crit_total = never_count + dead_count
+            parts = []
+            if crit_total:
+                parts.append(f"{crit_total} не отвечает")
+            if stale_count:
+                parts.append(f"{stale_count} протухло")
+            problem_total = crit_total + stale_count
+            message = f"{problem_total} из {len(handshakes)} пир(ов): " + ", ".join(parts)
 
         return DiagnosticsStep(
             id="wireguard",
